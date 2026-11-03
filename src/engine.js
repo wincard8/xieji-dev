@@ -62,7 +62,11 @@
     return ((lam % 360) + 360) % 360;
   }
 
-  /* ------------------------------------------------------- 二十四节气 */
+  /* 时区：1929 年前时宪历用北京地方平太阳时（约 UTC+7:45:40），其后用东八区 */
+  function tzOffsetHours(year) {
+    return year < 1929 ? (7 + 45 / 60 + 40 / 3600) : 8;
+  }
+
   const TERM_NAMES = ['立春', '雨水', '惊蛰', '春分', '清明', '谷雨', '立夏', '小满', '芒种', '夏至',
     '小暑', '大暑', '立秋', '处暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
   // 立春 = 315°，每隔 15° 一个节气
@@ -85,7 +89,7 @@
     }
     const g = jdnToGregorian(Math.floor(jd));
     const jdUT = jd - deltaT(g.year) / 86400;
-    const jdn = Math.floor(jdUT + 8 / 24 + 0.5);
+    const jdn = Math.floor(jdUT + tzOffsetHours(g.year) / 24 + 0.5);
     termCache.set(key, jdn);
     return jdn;
   }
@@ -158,7 +162,7 @@
     const jde = newMoonJDE(k);
     const { year } = jdnToGregorian(Math.floor(jde + 0.5));
     const jdUT = jde - deltaT(year) / 86400;
-    const jdn = Math.floor(jdUT + 8 / 24 + 0.5);
+    const jdn = Math.floor(jdUT + tzOffsetHours(year) / 24 + 0.5);
     nmCache.set(k, jdn);
     return jdn;
   }
@@ -504,6 +508,31 @@
     const season = Math.floor(((monthZhi - 2) + 12) % 12 / 3); // 0春 1夏 2秋 3冬（以节为界）
     const SHE = [{ g: 4, z: 2 }, { g: 0, z: 6 }, { g: 4, z: 8 }, { g: 0, z: 0 }][season];
     if (dayGan === SHE.g && dayZhi === SHE.z) add('天赦', '吉', minus(DE_YI, ['出师']), DE_JI.concat(['出师']), '天赦：所宜同天德，忌畋猎取鱼；卷十「不用以出师」，故出师不入宜。');
+    /* 月恩 / 四相 / 时德 / 天愿 / 天恩（卷五义例三，起例见各路历例） */
+    const mIdx = ((monthZhi - 2) % 12 + 12) % 12;            // 0=正月
+    const YUE_EN = [2, 3, 6, 5, 4, 7, 8, 9, 6, 1, 0, 7];     // 正丙 二丁 三庚 四己 五戊 六辛 七壬 八癸 九庚 十乙 十一甲 十二辛
+    if (dayGan === YUE_EN[mIdx])
+      add('月恩', '吉', ['营建', '嫁娶', '般移', '祭祀', '上官', '纳财'], [],
+        '月恩：阳建所生之干也，子母相从谓之月恩。其日宜营造、婚姻、移徙、祭祀、上官、纳财。历例：正月丙、二月丁、三月庚、四月己、五月戊、六月辛、七月壬、八月癸、九月庚、十月乙、十一月甲、十二月辛。');
+    const season2 = mIdx < 3 ? 0 : mIdx < 6 ? 1 : mIdx < 9 ? 2 : 3;   // 春 夏 秋 冬
+    const SIXIANG = [[2, 3], [4, 5], [8, 9], [0, 1]];                // 春丙丁 夏戊己 秋壬癸 冬甲乙
+    if (SIXIANG[season2].indexOf(dayGan) >= 0)
+      add('四相', '吉', ['营建', '兴造', '栽种', '般移'], [],
+        '四相：四时王相之辰也。其日宜修营起工、养育生财、栽植种莳、移徙远行。历例：春丙丁、夏戊己、秋壬癸、冬甲乙（不用庚辛）。');
+    const SHIDE = [6, 4, 0, 2];                                       // 春午 夏辰 秋子 冬寅
+    if (dayZhi === SHIDE[season2])
+      add('时德', '吉', ['营建', '兴造', '栽种', '般移'], [],
+        '时德：与四相同义，四相取天干、时德取地支。春木生火取午、夏火生土取辰、秋金生水取子、冬水生木取寅。其日所宜同四相。');
+    const TIANYUAN = [[0, 6], [0, 10], [1, 9], [2, 0], [3, 1], [4, 6], [0, 2], [2, 4], [7, 3], [4, 4], [0, 0], [9, 7]];
+    if (dayGan === TIANYUAN[mIdx][0] && dayZhi === TIANYUAN[mIdx][1])
+      add('天愿', '吉', ['嫁娶', '纳财', '宴会'], [],
+        '天愿：月中善神也，所值之日宜嫁娶、纳财、敦睦亲族。历例：正月甲午、二月甲戌、三月乙酉、四月丙子、五月丁丑、六月戊午、七月甲寅、八月丙辰、九月辛卯、十月戊辰、十一月甲子、十二月癸未。');
+    let tianEn = false;
+    const dgzIdx = ((dayGan * 6 - dayZhi * 5) % 60 + 60) % 60;
+    for (const [a, b] of [[0, 4], [15, 19], [45, 49]]) if (dgzIdx >= a && dgzIdx <= b) tianEn = true;
+    if (tianEn)
+      add('天恩', '吉', ['施恩', '宣政事', '宴会'], [],
+        '天恩：施德宽下之辰也。其日可以施恩赏、布政事、恤孤惸、兴宴乐。历例：甲子至戊辰、己卯至癸未、己酉至癸丑，凡十五日。');
     /* 三合 / 六合 */
     const diff = ((dayZhi - monthZhi) % 12 + 12) % 12;
     if (diff === 4 || diff === 8) add('三合', '吉', SANHE_YI, [], '三合：宜庆赐赏贺宴会、结姻、纳采问名、嫁娶、进人口、裁制、修宫室、缮城郭、兴造动土、竖柱上梁、修仓库、经络、酝酿、立券交易、纳财、安碓硙、纳畜。');
@@ -545,7 +574,7 @@
     ['起居杂事', ['沐浴', '扫舍', '整容', '剃头', '整手足甲', '入学', '安床', '裁制', '运谋']]
   ];
   const HEAVY = ['月破', '月厌', '劫煞', '灾煞', '月煞', '月刑'];
-  const DE_SHEN = ['天德', '月德', '天德合', '月德合', '天赦'];
+  const DE_SHEN = ['天德', '月德', '天德合', '月德合', '天赦', '月恩', '四相'];
 
   /* --------------------------------------------------------- 时家 */
   // 十二值神（黄黑道）：青龙所临之时支 = (2×日支 + 8) mod 12，余十一神顺行
@@ -648,7 +677,7 @@
     const heavy = ss.filter(s => HEAVY.includes(s.name));
     const hasDe = ss.some(s => DE_SHEN.includes(s.name));
     const hardPo = ss.some(s => s.name === '月破' || s.name === '月厌');
-    const shanSha = ss.filter(s => ['劫煞', '灾煞', '月煞', '月刑'].includes(s.name));
+    const shanSha = ss.filter(s => ['劫煞', '灾煞', '月煞', '月刑', '月害'].includes(s.name));
     const jianDay = ss.some(s => s.name === '月建');
 
     /* 等第（月表） */
@@ -671,23 +700,25 @@
       for (const s of ss) for (const x of s.yi) push(yiSet, x, s.name);
       for (const x of seaAdd) push(yiSet, x, JIANCHU[jc] + '日（时令）');
     }
-    for (const s of ss) if (s.bai) for (const x of s.bai) push(yiSet, x, s.name + '·不忌');
+    /* 卷十「止不忌」：义为不注宜、亦不注忌——故从忌中剔出，绝不入宜集 */
+    for (const s of ss) if (s.bai) for (const x of s.bai) jiSet.delete(x);
     if (jc === 6) for (const x of PO_YI) push(yiSet, x, '破日专宜');
 
+    /* 彭祖百忌：后世通书俗忌，不属《协纪》月表体系，故不入宜忌，只单列备参 */
     const baiji = [];
-    (BAIJI_GAN[dayGan] || []).forEach(x => { baiji.push(x); push(jiSet, x, '百忌日（日干）'); });
-    (BAIJI_ZHI[dayZhi] || []).forEach(x => { baiji.push(x); push(jiSet, x, '百忌日（日支）'); });
+    (BAIJI_GAN[dayGan] || []).forEach(x => { if (baiji.indexOf(x) < 0) baiji.push(x); });
+    (BAIJI_ZHI[dayZhi] || []).forEach(x => { if (baiji.indexOf(x) < 0) baiji.push(x); });
 
-    /* 遇德减忌：只保留卷十点名的几项（另加百忌日） */
+    /* 遇德减忌：只保留卷十点名的几项 */
     if (deSha) {
-      const keep = new Set(DE_SHA_JI.concat(baiji));
+      const keep = new Set(DE_SHA_JI);
       for (const t of Array.from(jiSet)) if (!keep.has(t)) jiSet.delete(t);
     } else if (deJian) {
-      const keep = new Set(TUFU_JI.concat(baiji));
+      const keep = new Set(TUFU_JI);
       for (const t of Array.from(jiSet)) if (!keep.has(t)) jiSet.delete(t);
     }
 
-    /* 百忌日为硬忌，不入宜 */
+    /* 百忌日既不属协纪，也从宜集剔除，避免与止不忌相抵 */
     for (const t of baiji) yiSet.delete(t);
 
     /* 依等第处理宜忌相抵 */
@@ -740,18 +771,19 @@
       const godGood = !!IS_GOOD[shenIdx];
       const chongZhi = (b + 6) % 12;
       const sha = SHA_DIR[sanheGroup(b)];
-      const isChongDay = b === chongZhi;               // 时冲日支：日破时
+      const isChongDay = b === (dayZhi + 6) % 12;      // 时冲日支：日破时
       const isKong = kong[0] === b || kong[1] === b;   // 旬空
       const lu = LU[dayGan] === b;                     // 日禄时
       const guiren = (GUIREN[dayGan] || []).indexOf(b) >= 0;
       const yima = YIMA[sanheGroup(dayZhi)] === b;     // 驿马时
       const liuhe = heZhi(dayZhi) === b;               // 时合日支
 
-      const bigBad = isChongDay;
-      const good = bigBad ? '大凶' : (godGood ? '吉' : '凶');
+      /* 时冲日支＝日破时：不改写黄黑道吉凶（保持与通书对照一致），只清空宜、全忌、加注 */
+      const bigBad = false;
+      const good = godGood ? '吉' : '凶';
 
       let hy = [];
-      if (!bigBad) {
+      if (!isChongDay) {
         hy = godGood ? yi.slice() : yi.filter(t => SMALL.includes(t));
         if (lu) hy = hy.concat(['纳财', '上官']);
         if (guiren) hy = hy.concat(['上官', '临政']);
@@ -761,14 +793,14 @@
       }
 
       let hj = [];
-      if (bigBad) hj = ji.slice();
+      if (isChongDay) hj = ji.slice();
       else {
         if (isKong) hj = hj.concat(['纳财', '上官', '行幸']);
         if (!godGood) hj = hj.concat(['嫁娶', '开市', '出行', '上官', '兴造', '安葬']);
         hj = Array.from(new Set(hj)).filter(t => !hy.includes(t)).sort(byOrder);
       }
 
-      const note = bigBad ? '时冲日支，为日破时，诸事不宜'
+      const note = isChongDay ? '时冲日支，为日破时，诸事不宜，大事另择'
         : (isKong ? '旬空之时，宜缓不宜急，大事另择'
           : (godGood ? '黄道时，可行本日所宜之事' : '黑道时，只取本日所宜中的小事，大事另择'));
 
