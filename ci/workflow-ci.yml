@@ -14,26 +14,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: 准备数据文件
-        run: cp data/*.js src/
-
-      - name: 历法
+      - name: 全部测试
         working-directory: src
-        run: node test.js
-
-      - name: 时辰
-        working-directory: src
-        run: node hour-test.js
-
-      - name: 渲染
-        working-directory: src
-        run: node render-test.js
-
-      - name: 义例起例
-        working-directory: src
-        run: node verify-yili.js
-
-      - name: 命理层审计
-        working-directory: src
-        run: node audit-mingli.js
+        run: node run-tests.js
