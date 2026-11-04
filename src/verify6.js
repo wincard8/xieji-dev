@@ -37,7 +37,7 @@ for (let gi = 0; gi < 6; gi++) {
 /* 独立算等第 */
 function expectGrade(shenshaNames, monthZhi) {
   if (shenshaNames.includes('月破')) return 5;
-  let g = 0;
+  let g = -1;
   for (const n of shenshaNames) {
     if (!T[n]) continue;
     for (let gi = 0; gi < 6; gi++) if (T[n][gi].includes(monthZhi) && gi > g) g = gi;
