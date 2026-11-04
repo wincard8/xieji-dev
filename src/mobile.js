@@ -69,7 +69,7 @@
     tsTab: 'yi', thing: 0, days: 60, quoteOpen: -1,
     zodiac: null, zMode: 'range', zMonth: '',
     bY: 1990, bM: 1, bD: 1, bLeap: false, bHz: null, qName: '', bz: null,
-    bMale: true, quiz: null,
+    bMale: true, quiz: null, cp: { a: '', ah: '', b: '', bh: '', res: null },
     favManual: null, unfManual: null, wx: null, favNow: null, unfNow: null
   };
   try {
@@ -697,7 +697,7 @@
     var grid = [
       { ic: '择', t: '择日查询', act: 'tab:zeri' },
       { ic: '时', t: '十二时辰', act: 'sheet:ts' },
-      { ic: '衣', t: '五行穿衣', act: 'sheet:dress' },
+      { ic: '缘', t: '五行男女', act: 'sheet:couple' },
       { ic: '文', t: '协纪原文', act: 'tab:quotes' },
       { ic: '历', t: '老黄历', act: 'tab:detail' },
       { ic: '月', t: '月历', act: 'sheet:cal' },
@@ -770,9 +770,12 @@
       }).join('') + '</div>' +
       '</div></div>' +
 
-      '<div class="card"><div class="card-hd"><div class="card-title">今日宜穿</div>' +
-      '<div class="card-more" data-act="sheet:dress">更多 ›</div></div>' +
-      '<div class="card-body">' + dressHtml(r, true) + '</div></div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">五行男女</div>' +
+      '<div class="card-more" data-act="sheet:couple">去测 ›</div></div>' +
+      '<div class="card-body">' +
+      '<div class="dress-txt">输入两人的生日，推各自八字，再按日支、生肖、日主五行、五行互补、夫妻星、强弱六项算合不合。</div>' +
+      '<button class="btn ghost" data-act="sheet:couple">开始测算</button>' +
+      '</div></div>' +
 
       '<div class="card"><div class="card-hd"><div class="card-title">卷十原文</div>' +
       '<div class="card-more" data-act="tab:quotes">全部 ›</div></div>' +
@@ -1024,7 +1027,8 @@
         ['与命局', '当日日支与你四柱的冲、合、害、刑。有冲或刑，首页顶部出现红条，提示大事宜避。'],
         ['大运 · 流年 · 流月 · 小运', '十年、一年、一月、一岁四级刻度。分数＝喜忌加减＋长生＋冲刑，权重为本程序自定，看相对高低即可，不必当绝对值。'],
         ['你的分数怎么扣', '底 50：日干逢喜 +14／逢忌 −14，日支逢喜 +10／逢忌 −10；调候主用 +9/+6、次用 +5/+3；再扣冲刑：天克地冲 −30（同柱不再另扣冲）、冲日柱 −25、冲其他柱 −12、刑 −8。吉日本就少，扣得严才是本意。'],
-        ['时辰（对你）', '每个时辰取当日时柱（五鼠遁定干）与你命局比：干支五行是否在喜忌、日主在该支的长生、是否冲刑你的四柱。分数高但仍冲日柱者标「慎」——黄黑道是通例，个人分是特例，两者会不一致。']
+        ['时辰（对你）', '每个时辰取当日时柱（五鼠遁定干）与你命局比：干支五行是否在喜忌、日主在该支的长生、是否冲刑你的四柱。分数高但仍冲日柱者标「慎」——黄黑道是通例，个人分是特例，两者会不一致。'],
+        ['五行男女（合婚）', '两人各排八字，按六项比：夫妻宫（日支）、生肖（年支）、日主五行生克、五行互补、夫妻星（男财女官）、强弱搭配。底 50，权重本程序自定；只讲合不合得来，不断婚姻成败。']
       ].map(function (d) {
         return '<details class="qitem"><summary>' + d[0] + '</summary>' +
           '<div class="quote">' + d[1] + '</div></details>';
@@ -1216,8 +1220,52 @@
       return '<div class="sheet-hd"><span>十二时辰</span><span class="chip" data-act="closesheet">关闭</span></div>' + rows +
         '<div class="note">时辰宜忌以本日宜忌为体、时之黄黑道为用；日忌之事任何时辰皆不宜。</div>';
     }
-    if (S.sheet === 'dress') {
-      return '<div class="sheet-hd"><span>五行穿衣</span><span class="chip" data-act="closesheet">关闭</span></div>' + dressHtml(r, false);
+    if (S.sheet === 'couple') {
+      var cp = S.cp || {};
+      var HR2 = ['23:00–00:59', '01:00–02:59', '03:00–04:59', '05:00–06:59', '07:00–08:59', '09:00–10:59',
+        '11:00–12:59', '13:00–14:59', '15:00–16:59', '17:00–18:59', '19:00–20:59', '21:00–22:59'];
+      var hsel = function (sel) {
+        var o = '<option value="">时辰不详</option>';
+        for (var i = 0; i < 12; i++) o += '<option value="' + i + '"' + (sel !== '' && +sel === i ? ' selected' : '') + '>' +
+          ZHI[i] + '时（' + HR2[i] + '）</option>';
+        return o;
+      };
+      var form =
+        '<div class="cp-block"><div class="cp-lab">男方生日（公历）</div>' +
+        '<input type="date" id="cpa" class="dateinput" min="1900-01-01" max="2100-12-31" value="' + esc(cp.a || '') + '">' +
+        '<select class="bsel" id="cpah" style="margin-top:8px;width:100%">' + hsel(cp.ah === undefined ? '' : cp.ah) + '</select></div>' +
+        '<div class="cp-block"><div class="cp-lab">女方生日（公历）</div>' +
+        '<input type="date" id="cpb" class="dateinput" min="1900-01-01" max="2100-12-31" value="' + esc(cp.b || '') + '">' +
+        '<select class="bsel" id="cpbh" style="margin-top:8px;width:100%">' + hsel(cp.bh === undefined ? '' : cp.bh) + '</select></div>' +
+        '<button class="btn" data-act="hehun" style="margin-top:12px">测算</button>' +
+        '<div class="mini" style="margin-top:8px">只填公历生日即可；时辰不确定可留空（四柱只缺时柱，不影响主体判断）。</div>';
+      var out = '';
+      if (cp.res) {
+        var res = cp.res, R2 = res.r;
+        out = '<div class="hr"></div>' +
+          '<div class="hh-score"><div class="hh-num serif">' + R2.score + '</div>' +
+          '<div class="hh-grade">' + esc(R2.grade) + '</div>' +
+          '<div class="mini">合婚分（50 为平，权重本程序自定）</div></div>' +
+          '<div class="hh-cols">' +
+          '<div class="hh-col"><div class="mini">男</div><div class="hh-bz serif">' +
+          [res.m.yearText, res.m.monthText, res.m.dayText, res.m.hourText || '—'].map(esc).join(' ') + '</div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.m.dayMaster]) + '｜' + (R2.wxM.strong ? '身强' : '身弱') + '</div></div>' +
+          '<div class="hh-col"><div class="mini">女</div><div class="hh-bz serif">' +
+          [res.f.yearText, res.f.monthText, res.f.dayText, res.f.hourText || '—'].map(esc).join(' ') + '</div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.f.dayMaster]) + '｜' + (R2.wxF.strong ? '身强' : '身弱') + '</div></div>' +
+          '</div>' +
+          R2.items.map(function (x) {
+            var mark = x.d > 0 ? '✔' : (x.d < 0 ? '✘' : '·');
+            var cls = x.d > 0 ? 'ok' : (x.d < 0 ? 'bad' : 'flat');
+            return '<div class="hh-item ' + cls + '"><span class="hh-mk">' + mark + '</span>' +
+              '<span class="hh-t">' + esc(x.t) + '</span>' +
+              '<span class="hh-d">' + (x.d > 0 ? '+' + x.d : (x.d < 0 ? x.d : '0')) + '</span>' +
+              '<div class="hh-note">' + esc(x.note) + '</div></div>';
+          }).join('') +
+          '<div class="mini" style="margin-top:10px">合婚只看「合不合得来」，不作婚姻成败的断语。两人相处终究在人，不在八字。分数仅供参考。</div>';
+      }
+      return '<div class="sheet-hd"><span>五行男女 · 八字合婚</span><span class="chip" data-act="closesheet">关闭</span></div>' +
+        form + out;
     }
     if (S.sheet === 'quote') {
       var s = r.shensha[S.quoteOpen];
@@ -1367,6 +1415,19 @@
     }
     if (k === 'yili') { S.qName = decodeURIComponent(p[1] || ''); S.sheet = 'yili'; render(); return; }
     if (k === 'bmode') { S.bMode = (p[1] === 'solar') ? 'solar' : 'lunar'; render(); return; }
+    if (k === 'hehun') {
+      var cp = S.cp || {};
+      if (!cp.a || !cp.b) { toast('请先填两人的公历生日'); return; }
+      var pa = cp.a.split('-').map(Number), pb = cp.b.split('-').map(Number);
+      if (pa.length !== 3 || pb.length !== 3) { toast('日期格式不对'); return; }
+      try {
+        var bm = E.baziOf(pa[0], pa[1], pa[2], (cp.ah === '' || cp.ah === undefined) ? null : +cp.ah);
+        var bf = E.baziOf(pb[0], pb[1], pb[2], (cp.bh === '' || cp.bh === undefined) ? null : +cp.bh);
+        S.cp.res = { m: bm, f: bf, r: E.hehun(bm, bf) };
+        render();
+      } catch (err) { toast('推算失败：' + (err && err.message ? err.message : '')); }
+      return;
+    }
     if (k === 'savebirth') {
       var jdnB = E.lunarToJDN(S.bY, S.bM, S.bD, S.bLeap);
       if (jdnB === null) { toast('没找到这个农历日子'); return; }
@@ -1410,6 +1471,14 @@
     if (id === 'bg') { S.bMale = e.target.value === '1'; saveBirth(); render(); return; }
     if (id === 'caly') { S.calY = +e.target.value; render(); return; }
     if (id === 'calm') { S.calM = +e.target.value; render(); return; }
+    if (id === 'cpa' || id === 'cpb' || id === 'cpah' || id === 'cpbh') {
+      S.cp = S.cp || {};
+      if (id === 'cpa') S.cp.a = e.target.value;
+      else if (id === 'cpb') S.cp.b = e.target.value;
+      else if (id === 'cpah') S.cp.ah = e.target.value;
+      else S.cp.bh = e.target.value;
+      return;
+    }
     if (id === 'bsolar' && e.target.value) {
       var sp = e.target.value.split('-').map(Number);
       if (sp.length === 3) {
