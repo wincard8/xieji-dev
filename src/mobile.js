@@ -381,7 +381,7 @@
   }
 
   function renderList(items) {
-    if (!items.length) return '<span class="mini">—</span>';
+    if (!items.length) return '<span class="mini">无</span>';
     return items.map(function (x) {
       return '<span title="协纪原文：' + esc(x.t) + '">' + esc(x.m) + '</span>';
     }).join('');
@@ -537,6 +537,12 @@
         '·' + (wx.deLing ? '得令' : '失令') + '·得地' + wx.deDi + '·得势' + wx.deShi + '）；今日' +
         esc(r.dayGZText) + '日，为你的「<b>' + rel.shiShen + '</b>」。<span class="mini">' +
         esc(SHISHEN_TXT[rel.shiShen] || '') + '</span></div>';
+      if (wx.unclear) {
+        rows += '<div class="warnbox" style="margin-top:6px"><b>强弱临界</b>：支持率 ' +
+          Math.round(wx.ratio * 100) + '%，与「得令 ' + (wx.deLing ? 1 : 0) + '·得地 ' + wx.deDi +
+          '·得势 ' + wx.deShi + '」结论不一致。此盘身强/身弱难以定论，喜忌可能反向，' +
+          '下面的分数与择日只作参考。</div>';
+      }
       var _gj = E.geJu(b);
       var _st = E.geJuStatus(b, _gj);
       rows += '<div class="dress-txt">格局：<b>' + esc(_gj.name) + '</b>（月令' + esc(ZHI[_gj.zhi]) + '·' +
@@ -734,6 +740,10 @@
       '<div class="tags">' + tags.join('') + '</div></div>' +
       alertHtml +
       '<div class="yiji">' +
+      (r.gradeName === '无等第'
+        ? '<div class="warnbox" style="margin:2px 0 8px">本日不属《协纪》月表六等，<b>不作吉凶判定</b>。' +
+          '下列「宜」只是当日吉神之所宜，不等于「诸事皆宜」；「忌」为空也只是无凶煞可忌。</div>'
+        : '') +
       '<div class="yiji-row"><div class="mark yi">宜</div><div class="yiji-txt">' + renderList(D.yi) + '</div></div>' +
       '<div class="yiji-row"><div class="mark ji">忌</div><div class="yiji-txt">' + renderList(D.ji) + '</div></div>' +
       (note.length ? '<div class="xj-note">' + note.join('') + '</div>' : '') +
@@ -1184,6 +1194,21 @@
       var bs0 = birthSolar();
       var solarRow = '<input type="date" id="bsolar" class="dateinput" min="1900-01-01" max="2100-12-31" value="' +
         (bs0 ? bs0.year + '-' + pad(bs0.month) + '-' + pad(bs0.day) : '') + '">';
+      /* 交节提示：所选时辰内恰逢十二节之一 */
+      var termWarn = '';
+      if (bs0 && S.bHz !== null && S.bHz !== undefined) {
+        try {
+          var tw = E.termInHour(E.gregorianToJDN(bs0.year, bs0.month, bs0.day), S.bHz);
+          if (tw) {
+            var hh2 = Math.floor(tw.mins / 60), mm2 = tw.mins % 60;
+            termWarn = '<div class="warnbox" style="margin-top:10px"><b>此时辰跨交节：' +
+              esc(tw.name) + ' ' + pad(hh2) + ':' + pad(mm2) + '</b>' +
+              '<div style="margin-top:4px">' + esc(ZHI[tw.hourZhi]) + '时（' + esc(HRANGE[tw.hourZhi]) +
+              '）之内交节，年柱、月柱在交节前后不同。本程序按交节所在日整天换柱，' +
+              '若出生在交节之前，四柱可能差一位。能确定具体钟点的，请以钟点为准另排。</div></div>';
+          }
+        } catch (e) { }
+      }
       return '<div class="sheet-hd"><span>选择生日</span><span class="chip" data-act="closesheet">关闭</span></div>' +
         modeToggle +
         (mode === 'solar' ? solarRow : lunarRow) +
@@ -1193,7 +1218,7 @@
         '<option value="1"' + (S.bMale ? ' selected' : '') + '>男</option>' +
         '<option value="0"' + (S.bMale ? '' : ' selected') + '>女</option>' +
         '</select>' +
-        '</div>' +
+        '</div>' + termWarn +
         '<div class="mini" style="margin-top:10px">' + (mode === 'solar'
           ? '按<b>公历</b>填生日，程序自动转成农历与四柱。'
           : '按<b>农历</b>填生日（闰月另列）。') +
@@ -1313,10 +1338,10 @@
           '<div class="hh-cols">' +
           '<div class="hh-col"><div class="mini">男</div><div class="hh-bz serif">' +
           [res.m.yearText, res.m.monthText, res.m.dayText, res.m.hourText || '—'].map(esc).join(' ') + '</div>' +
-          '<div class="mini">日主 ' + esc(GAN[res.m.dayMaster]) + '｜' + (R2.wxM.strong ? '身强' : '身弱') + '</div></div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.m.dayMaster]) + '｜' + esc(R2.wxM.strengthText) + '</div></div>' +
           '<div class="hh-col"><div class="mini">女</div><div class="hh-bz serif">' +
           [res.f.yearText, res.f.monthText, res.f.dayText, res.f.hourText || '—'].map(esc).join(' ') + '</div>' +
-          '<div class="mini">日主 ' + esc(GAN[res.f.dayMaster]) + '｜' + (R2.wxF.strong ? '身强' : '身弱') + '</div></div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.f.dayMaster]) + '｜' + esc(R2.wxF.strengthText) + '</div></div>' +
           '</div>' +
           R2.items.map(function (x) {
             var mark = x.d > 0 ? '✔' : (x.d < 0 ? '✘' : '·');
@@ -1597,7 +1622,7 @@
         if (q.length >= 3) {
           try {
             S.bz = E.baziOf(q[0], q[1], q[2], q.length > 3 ? q[3] : null);
-            S.zodiac = S.bz.year.z;
+            S.zodiac = S.bz.shengxiao;
             var _lu = E.toLunar(E.gregorianToJDN(q[0], q[1], q[2]));
             S.bY = _lu.year; S.bM = _lu.month; S.bD = _lu.day; S.bLeap = !!_lu.leap;
             if (q.length > 3) S.bHz = q[3];
