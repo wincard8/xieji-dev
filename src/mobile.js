@@ -1175,9 +1175,16 @@
         if (S.y === S.calY && S.m === S.calM && S.d === d) cls += ' sel';
         cells += '<div class="' + cls + '" data-act="pick:' + S.calY + '-' + S.calM + '-' + d + '">' + d + '<span class="lu">' + lu + '</span></div>';
       }
-      return '<div class="sheet-hd"><span class="card-more" data-act="calprev">‹ 上月</span>' +
-        '<span>' + S.calY + ' 年 ' + S.calM + ' 月</span>' +
-        '<span class="card-more" data-act="calnext">下月 ›</span></div>' +
+      var yOpts2 = '';
+      for (var cy = 1900; cy <= 2100; cy++) yOpts2 += '<option value="' + cy + '"' + (cy === S.calY ? ' selected' : '') + '>' + cy + ' 年</option>';
+      var mOpts2 = '';
+      for (var cm = 1; cm <= 12; cm++) mOpts2 += '<option value="' + cm + '"' + (cm === S.calM ? ' selected' : '') + '>' + cm + ' 月</option>';
+      return '<div class="sheet-hd"><span class="card-more" data-act="calprev">‹</span>' +
+        '<span style="display:flex;gap:6px;align-items:center">' +
+        '<select class="bsel" id="caly" style="width:104px;padding:4px 6px;font-size:14px">' + yOpts2 + '</select>' +
+        '<select class="bsel" id="calm" style="width:82px;padding:4px 6px;font-size:14px">' + mOpts2 + '</select>' +
+        '</span>' +
+        '<span class="card-more" data-act="calnext">›</span></div>' +
         '<div class="week-hd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>' +
         '<div class="cal">' + cells + '</div>' +
         '<div style="text-align:center;margin-top:10px"><span class="chip" data-act="caltoday">回到今天</span></div>';
@@ -1392,6 +1399,8 @@
     if (id === 'bd') { S.bD = +e.target.value; return; }
     if (id === 'bh') { S.bHz = e.target.value === '' ? null : +e.target.value; return; }
     if (id === 'bg') { S.bMale = e.target.value === '1'; saveBirth(); render(); return; }
+    if (id === 'caly') { S.calY = +e.target.value; render(); return; }
+    if (id === 'calm') { S.calM = +e.target.value; render(); return; }
     if (id === 'bsolar' && e.target.value) {
       var sp = e.target.value.split('-').map(Number);
       if (sp.length === 3) {
