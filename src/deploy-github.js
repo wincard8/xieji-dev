@@ -51,7 +51,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   /* 2. 建仓库 */
   let r = await api('POST', '/user/repos', { name: REPO, private: false, auto_init: false, description: '协纪黄历 · 传统历法查询' });
   if (r.status === 201) console.log('仓库已创建：', r.json.full_name);
-  else if (r.status === 422 || r.status === 403) console.log('仓库已存在或无权限新建，按已存在处理');
+  else if (r.status === 422 || r.status === 403 || r.status === 500)
+    console.log('仓库已存在或无权限新建（' + r.status + '），按已存在处理');
   else { console.error('建仓库失败：', r.status, r.raw.slice(0, 300)); process.exit(1); }
 
   /* 3. 上传文件 */
