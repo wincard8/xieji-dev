@@ -332,6 +332,48 @@ body{
     return jdn;
   }
 
+  /* 节气瞬时（北京时间）：返回 { jdn: 所在民用日, mins: 当日 0 时起的分钟数 } */
+  const termInstCache = new Map();
+  function solarTermInstant(year, idx) {
+    const key = year * 100 + idx;
+    if (termInstCache.has(key)) return termInstCache.get(key);
+    const target = TERM_LON[idx];
+    let jd = gregorianToJDN(year, 2, 4) + 0.5 + idx * 15.2184;
+    for (let i = 0; i < 60; i++) {
+      const lon = sunLongitude(jd);
+      let diff = target - lon;
+      diff = ((diff + 180) % 360 + 360) % 360 - 180;
+      if (Math.abs(diff) < 1e-9) break;
+      jd += diff / 0.9856473;
+    }
+    const g = jdnToGregorian(Math.floor(jd));
+    const jdUT = jd - deltaT(g.year) / 86400;
+    const bj = jdUT + tzOffsetHours(g.year) / 24 + 0.5;
+    const day = Math.floor(bj);
+    const out = { jdn: day, mins: Math.round((bj - day) * 1440) };
+    termInstCache.set(key, out);
+    return out;
+  }
+
+  /* 出生日 + 时辰，是否落在交节（十二节）的同一个时辰内
+     返回 { name, jdn, mins } 或 null */
+  function termInHour(birthJDN, hourZhi) {
+    if (hourZhi === null || hourZhi === undefined) return null;
+    const g = jdnToGregorian(birthJDN);
+    const startH = hourZhi === 0 ? 23 : 2 * hourZhi - 1;
+    const from = startH * 60, to = from + 120;
+    for (let yy = g.year - 1; yy <= g.year + 1; yy++) {
+      for (let i = 0; i < 24; i += 2) {          // 只查十二节（换柱之用）
+        const t = solarTermInstant(yy, i);
+        if (t.jdn !== birthJDN) continue;
+        if (t.mins >= from && t.mins < to) {
+          return { name: TERM_NAMES[i], jdn: t.jdn, mins: t.mins, hourZhi: hourZhi };
+        }
+      }
+    }
+    return null;
+  }
+
   // 节气标签 (year, i)：i=0 立春（该年 2 月）… i=23 大寒（次年 1 月）
   function termIndexOfJDN(jdn) {
     const { year } = jdnToGregorian(jdn);
@@ -834,6 +876,8 @@ body{
     const s = Math.floor(dgz / 10);
     return [(10 - 2 * s + 12) % 12, (11 - 2 * s + 12) % 12];
   }
+  /* 别名：早先另有一份定义（同义），合并为一处，避免重复声明被后者覆盖 */
+  const xunKongOf = xunKong;
 
   /* --------------------------------------------------------- 卷十「月表」六等
      数据来源：《钦定协纪辨方书》卷十 月表（原书第 220–221 页），
@@ -1147,15 +1191,20 @@ body{
       dayMaster: dg,
       yearText: r.yearGZText, monthText: r.monthGZText, dayText: r.dayGZText,
       hourText: hz === null ? '' : GAN[hourGan(dg, hz)] + ZHI[hz],
-      jieqi: r.term ? r.term.name : ''
+      jieqi: r.term ? r.term.name : '',
+      /* 生肖按农历年（春节）定，与八字年柱（立春）分开，避免两套口径混用 */
+      shengxiao: (function () {
+        try {
+          const lu = toLunar(gregorianToJDN(y, m, d));
+          return (((lu.year - 1984) % 12) + 12) % 12;
+        } catch (e) { return r.yearGZ % 12; }
+      })()
     };
   }
 
-  /* 旬空：由六十甲子序号定 */
-  function xunKong(idx) {
-    const start = idx - (idx % 10);
-    return [(start + 10) % 12, (start + 11) % 12];
-  }
+  /* 旬空：由六十甲子序号定（与上方 xunKong 同义，保留此实现以免外部引用失配） */
+  /* 注：原此处另有一份 function xunKong(idx)，因重复声明会覆盖前者，已删除；
+     两式等价：[(10-2s)%12,(11-2s)%12] 与 [(start+10)%12,(start+11)%12]。 */
 
   const HE6 = [1, 0, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
   const HAI6 = [7, 6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8];
@@ -1253,18 +1302,22 @@ body{
     });
 
     const strong = ratio >= 0.5;
+    /* 临界带：比例在 0.45–0.55，且「得令+得地+得势」与比例结论相反时不强判 */
+    const deScore = (deLing ? 1 : 0) + deDi + deShi;
+    const unclear = Math.abs(ratio - 0.5) <= 0.05 && ((strong && deScore <= 1) || (!strong && deScore >= 3));
     let fav = strong ? [keMe, woKe, woSheng] : [shengMe, me];
     let unf = strong ? [shengMe, me] : [keMe, woKe, woSheng];
-    const tiaohou = [11, 0, 1].indexOf(bz.month.z) >= 0 ? 1 : ([5, 6, 7].indexOf(bz.month.z) >= 0 ? 4 : -1);
-    if (tiaohou >= 0 && fav.indexOf(tiaohou) < 0) fav = fav.concat([tiaohou]);
+    /* 原来的「冬取火、夏取水」粗调候已移除：它不看日主，且与《穷通宝鉴》逐月条文重复、
+       常与旺衰相反（冬生火多者仍被加火为喜）。调候改由 tiaohouOf() 按原文逐格处理。 */
+    const tiaohou = -1;
     unf = unf.filter(w => fav.indexOf(w) < 0);
 
     return {
       counts: raw.map(v => Math.round(v * 10) / 10),
       force: force.map(v => Math.round(v * 100) / 100),
       ratio: Math.round(ratio * 100) / 100,
-      strong: strong, strengthText: strong ? '身强' : '身弱',
-      deLing: deLing, deDi: deDi, deShi: deShi,
+      strong: strong, strengthText: unclear ? '强弱难定' : (strong ? '身强' : '身弱'), unclear: unclear,
+      deLing: deLing, deDi: deDi, deShi: deShi, deScore: deScore,
       fav: fav, unf: unf, tiaohou: tiaohou,
       favText: fav.map(w => WX_NAME[w]).join('、'),
       unfText: unf.map(w => WX_NAME[w]).join('、')
@@ -1508,8 +1561,8 @@ body{
     const r1 = zhiRel(bzM.day.z, bzF.day.z);
     add('夫妻宫（日支）', r1.d > 0, ZHI[bzM.day.z] + ' 与 ' + ZHI[bzF.day.z] + (r1.k ? ' ' + r1.k : ' 无刑冲合害'), r1.d);
     /* 2 年支（生肖）*/
-    const r2 = zhiRel(bzM.year.z, bzF.year.z);
-    add('生肖（年支）', r2.d > 0, ZHI[bzM.year.z] + ' 与 ' + ZHI[bzF.year.z] + (r2.k ? ' ' + r2.k : ' 无刑冲合害'), Math.round(r2.d * 0.6));
+    const r2 = zhiRel(bzM.shengxiao, bzF.shengxiao);
+    add('生肖（春节口径）', r2.d > 0, ZHI[bzM.shengxiao] + ' 与 ' + ZHI[bzF.shengxiao] + (r2.k ? ' ' + r2.k : ' 无刑冲合害'), Math.round(r2.d * 0.6));
     /* 3 日主五行 */
     const am = GAN_WX(bzM.dayMaster), af = GAN_WX(bzF.dayMaster);
     const SHENG = i => (i + 1) % 5;
@@ -1576,7 +1629,7 @@ body{
   return {
     gregorianToJDN, jdnToGregorian, toLunar, lunarToJDN, lunarMonthsOf, computeDay,
     baziOf, shiShen, dayRelations, xunKong, baziWuxing, scoreOf, WX_NAME, ZHI_WX, ZHI_CANG,
-    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun, hehun,
+    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun, hehun, solarTermInstant, termInHour,
     qiYun, daYun, liuNian,
     sunLongitude, solarTermJDN, TERM_NAMES, newMoonJDN,
     GAN, ZHI, ANIMALS, JIANCHU, ORDER, GLOSS, JIANCHU_DATA, deltaT
@@ -3299,7 +3352,7 @@ window.XiejiQiongtong = {
   }
 
   function renderList(items) {
-    if (!items.length) return '<span class="mini">—</span>';
+    if (!items.length) return '<span class="mini">无</span>';
     return items.map(function (x) {
       return '<span title="协纪原文：' + esc(x.t) + '">' + esc(x.m) + '</span>';
     }).join('');
@@ -3455,6 +3508,12 @@ window.XiejiQiongtong = {
         '·' + (wx.deLing ? '得令' : '失令') + '·得地' + wx.deDi + '·得势' + wx.deShi + '）；今日' +
         esc(r.dayGZText) + '日，为你的「<b>' + rel.shiShen + '</b>」。<span class="mini">' +
         esc(SHISHEN_TXT[rel.shiShen] || '') + '</span></div>';
+      if (wx.unclear) {
+        rows += '<div class="warnbox" style="margin-top:6px"><b>强弱临界</b>：支持率 ' +
+          Math.round(wx.ratio * 100) + '%，与「得令 ' + (wx.deLing ? 1 : 0) + '·得地 ' + wx.deDi +
+          '·得势 ' + wx.deShi + '」结论不一致。此盘身强/身弱难以定论，喜忌可能反向，' +
+          '下面的分数与择日只作参考。</div>';
+      }
       var _gj = E.geJu(b);
       var _st = E.geJuStatus(b, _gj);
       rows += '<div class="dress-txt">格局：<b>' + esc(_gj.name) + '</b>（月令' + esc(ZHI[_gj.zhi]) + '·' +
@@ -3652,6 +3711,10 @@ window.XiejiQiongtong = {
       '<div class="tags">' + tags.join('') + '</div></div>' +
       alertHtml +
       '<div class="yiji">' +
+      (r.gradeName === '无等第'
+        ? '<div class="warnbox" style="margin:2px 0 8px">本日不属《协纪》月表六等，<b>不作吉凶判定</b>。' +
+          '下列「宜」只是当日吉神之所宜，不等于「诸事皆宜」；「忌」为空也只是无凶煞可忌。</div>'
+        : '') +
       '<div class="yiji-row"><div class="mark yi">宜</div><div class="yiji-txt">' + renderList(D.yi) + '</div></div>' +
       '<div class="yiji-row"><div class="mark ji">忌</div><div class="yiji-txt">' + renderList(D.ji) + '</div></div>' +
       (note.length ? '<div class="xj-note">' + note.join('') + '</div>' : '') +
@@ -4102,6 +4165,21 @@ window.XiejiQiongtong = {
       var bs0 = birthSolar();
       var solarRow = '<input type="date" id="bsolar" class="dateinput" min="1900-01-01" max="2100-12-31" value="' +
         (bs0 ? bs0.year + '-' + pad(bs0.month) + '-' + pad(bs0.day) : '') + '">';
+      /* 交节提示：所选时辰内恰逢十二节之一 */
+      var termWarn = '';
+      if (bs0 && S.bHz !== null && S.bHz !== undefined) {
+        try {
+          var tw = E.termInHour(E.gregorianToJDN(bs0.year, bs0.month, bs0.day), S.bHz);
+          if (tw) {
+            var hh2 = Math.floor(tw.mins / 60), mm2 = tw.mins % 60;
+            termWarn = '<div class="warnbox" style="margin-top:10px"><b>此时辰跨交节：' +
+              esc(tw.name) + ' ' + pad(hh2) + ':' + pad(mm2) + '</b>' +
+              '<div style="margin-top:4px">' + esc(ZHI[tw.hourZhi]) + '时（' + esc(HRANGE[tw.hourZhi]) +
+              '）之内交节，年柱、月柱在交节前后不同。本程序按交节所在日整天换柱，' +
+              '若出生在交节之前，四柱可能差一位。能确定具体钟点的，请以钟点为准另排。</div></div>';
+          }
+        } catch (e) { }
+      }
       return '<div class="sheet-hd"><span>选择生日</span><span class="chip" data-act="closesheet">关闭</span></div>' +
         modeToggle +
         (mode === 'solar' ? solarRow : lunarRow) +
@@ -4111,7 +4189,7 @@ window.XiejiQiongtong = {
         '<option value="1"' + (S.bMale ? ' selected' : '') + '>男</option>' +
         '<option value="0"' + (S.bMale ? '' : ' selected') + '>女</option>' +
         '</select>' +
-        '</div>' +
+        '</div>' + termWarn +
         '<div class="mini" style="margin-top:10px">' + (mode === 'solar'
           ? '按<b>公历</b>填生日，程序自动转成农历与四柱。'
           : '按<b>农历</b>填生日（闰月另列）。') +
@@ -4231,10 +4309,10 @@ window.XiejiQiongtong = {
           '<div class="hh-cols">' +
           '<div class="hh-col"><div class="mini">男</div><div class="hh-bz serif">' +
           [res.m.yearText, res.m.monthText, res.m.dayText, res.m.hourText || '—'].map(esc).join(' ') + '</div>' +
-          '<div class="mini">日主 ' + esc(GAN[res.m.dayMaster]) + '｜' + (R2.wxM.strong ? '身强' : '身弱') + '</div></div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.m.dayMaster]) + '｜' + esc(R2.wxM.strengthText) + '</div></div>' +
           '<div class="hh-col"><div class="mini">女</div><div class="hh-bz serif">' +
           [res.f.yearText, res.f.monthText, res.f.dayText, res.f.hourText || '—'].map(esc).join(' ') + '</div>' +
-          '<div class="mini">日主 ' + esc(GAN[res.f.dayMaster]) + '｜' + (R2.wxF.strong ? '身强' : '身弱') + '</div></div>' +
+          '<div class="mini">日主 ' + esc(GAN[res.f.dayMaster]) + '｜' + esc(R2.wxF.strengthText) + '</div></div>' +
           '</div>' +
           R2.items.map(function (x) {
             var mark = x.d > 0 ? '✔' : (x.d < 0 ? '✘' : '·');
@@ -4515,7 +4593,7 @@ window.XiejiQiongtong = {
         if (q.length >= 3) {
           try {
             S.bz = E.baziOf(q[0], q[1], q[2], q.length > 3 ? q[3] : null);
-            S.zodiac = S.bz.year.z;
+            S.zodiac = S.bz.shengxiao;
             var _lu = E.toLunar(E.gregorianToJDN(q[0], q[1], q[2]));
             S.bY = _lu.year; S.bM = _lu.month; S.bD = _lu.day; S.bLeap = !!_lu.leap;
             if (q.length > 3) S.bHz = q[3];
