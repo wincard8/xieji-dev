@@ -936,8 +936,10 @@
         out.push({ type: '刑', pillar: label, text: '刑' + label + '柱' + ZHI[p.z] });
       if (dayZ === p.z && [4, 6, 9, 11].indexOf(dayZ) >= 0)
         out.push({ type: '自刑', pillar: label, text: '自刑（' + ZHI[dayZ] + '）' });
-      /* 天克地冲 */
-      if (dayZ === (p.z + 6) % 12 && GAN_WX(dayG) === KE(GAN_WX(p.g)))
+      /* 天克地冲：天干相克（无论谁克谁）＋ 地支相冲 */
+      if (dayZ === (p.z + 6) % 12 &&
+        GAN_WX(dayG) !== GAN_WX(p.g) &&
+        (KE(GAN_WX(dayG)) === GAN_WX(p.g) || KE(GAN_WX(p.g)) === GAN_WX(dayG)))
         out.push({ type: '天克地冲', pillar: label, text: '天克地冲' + label + '柱（' + GAN[p.g] + ZHI[p.z] + '）' });
     }
     const shi = shiShen(bz.dayMaster, dayG);
