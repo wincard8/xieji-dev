@@ -1243,6 +1243,74 @@
     return r ? { shi: r.shi, by: r.by, name: gj.name } : null;
   }
 
+  /* 合婚：男命先、女命后。分数＝50 底分＋各项加减（权重本程序自定） */
+  function hehun(bzM, bzF) {
+    const items = [];
+    const add = (t, ok, note, d) => items.push({ t: t, ok: ok, note: note, d: d });
+    const zhiRel = (x, y) => {
+      if (HE6[x] === y) return { k: '六合', d: 12 };
+      if (sanheGroup(x) === sanheGroup(y) && x !== y) return { k: '三合', d: 10 };
+      if ((x + 6) % 12 === y) return { k: '相冲', d: -15 };
+      if (XING_GROUP[x] === 3 && x === y) return { k: '自刑', d: -6 };
+      if (XING_GROUP[x] >= 0 && XING_GROUP[x] === XING_GROUP[y] && x !== y && XING_GROUP[x] !== 3) return { k: '相刑', d: -8 };
+      if (HAI6[x] === y) return { k: '相害', d: -6 };
+      if (x === y) return { k: '同支', d: 4 };
+      return { k: '', d: 0 };
+    };
+    const wm = baziWuxing(bzM), wf = baziWuxing(bzF);
+
+    /* 1 日支（夫妻宫）*/
+    const r1 = zhiRel(bzM.day.z, bzF.day.z);
+    add('夫妻宫（日支）', r1.d > 0, ZHI[bzM.day.z] + ' 与 ' + ZHI[bzF.day.z] + (r1.k ? ' ' + r1.k : ' 无刑冲合害'), r1.d);
+    /* 2 年支（生肖）*/
+    const r2 = zhiRel(bzM.year.z, bzF.year.z);
+    add('生肖（年支）', r2.d > 0, ZHI[bzM.year.z] + ' 与 ' + ZHI[bzF.year.z] + (r2.k ? ' ' + r2.k : ' 无刑冲合害'), Math.round(r2.d * 0.6));
+    /* 3 日主五行 */
+    const am = GAN_WX(bzM.dayMaster), af = GAN_WX(bzF.dayMaster);
+    const SHENG = i => (i + 1) % 5;
+    if (am === af) add('日主同气', true, WX_NAME[am] + ' 与 ' + WX_NAME[af] + ' 同类，性情相近', 5);
+    else if (SHENG(am) === af || SHENG(af) === am)
+      add('日主相生', true, WX_NAME[am] + ' 与 ' + WX_NAME[af] + ' 相生，彼此有助', 8);
+    else add('日主相克', false, WX_NAME[am] + ' 与 ' + WX_NAME[af] + ' 相克，易有拉扯', -8);
+    /* 4 五行互补：一方所喜，是否为对方命中所旺 */
+    const comp = (wa, wb, who) => {
+      let n = 0;
+      (wa.fav || []).forEach(w => { if ((wb.counts[w] || 0) >= 0.6 && n < 2) n++; });
+      if (n) add('五行互补', true, who + '所喜的 ' + (wa.fav || []).map(w => WX_NAME[w]).join('') + '，对方命中有', n * 4);
+      return n * 4;
+    };
+    const c1 = comp(wm, wf, '男方'); const c2 = comp(wf, wm, '女方');
+    if (!c1 && !c2) add('五行互补', false, '两人所喜五行彼此都不旺，需靠相处与后天补', 0);
+    /* 5 夫妻星 */
+    const hasShi = (bz, names) => {
+      const me = bz.dayMaster;
+      const ps = [bz.year, bz.month, bz.day].concat(bz.hour ? [bz.hour] : []);
+      for (const p of ps) {
+        if (names.indexOf(shiShen(me, p.g)) >= 0) return '透干';
+        for (const g of ZHI_CANG[p.z]) if (names.indexOf(shiShen(me, g)) >= 0) return '藏干';
+      }
+      return '';
+    };
+    const qm = hasShi(bzM, ['正财', '偏财']);
+    const qf = hasShi(bzF, ['正官', '七杀']);
+    add('男命妻星', !!qm, qm ? '财星' + qm + '（妻星有力）' : '财星不现，妻缘需主动经营', qm === '透干' ? 5 : qm ? 3 : 0);
+    add('女命夫星', !!qf, qf ? '官星' + qf + '（夫星有力）' : '官星不现，夫缘需慢慢遇', qf === '透干' ? 5 : qf ? 3 : 0);
+    /* 6 强弱搭配 */
+    if (wm.strong !== wf.strong) add('强弱互补', true, '一强一弱，主导与配合容易分工', 4);
+    else add('强弱同调', wm.strong ? false : true, wm.strong ? '两人都偏强，容易各执一词' : '两人都偏弱，遇事易互相等待', wm.strong ? -3 : -2);
+
+    let sum = 50;
+    for (const it of items) sum += it.d;
+    sum = Math.max(0, Math.min(100, Math.round(sum)));
+    let grade = '一般';
+    if (sum >= 80) grade = '很合';
+    else if (sum >= 65) grade = '较合';
+    else if (sum >= 50) grade = '一般';
+    else if (sum >= 35) grade = '需磨合';
+    else grade = '多阻';
+    return { score: sum, grade: grade, items: items, wxM: wm, wxF: wf };
+  }
+
   /* 流月：按节气月取 12 个干支（取每月 15 日为样本日，月柱已按节分） */
   function liuYue(year) {
     const out = [];
@@ -1263,7 +1331,7 @@
   return {
     gregorianToJDN, jdnToGregorian, toLunar, lunarToJDN, lunarMonthsOf, computeDay,
     baziOf, shiShen, dayRelations, xunKong, baziWuxing, scoreOf, WX_NAME, ZHI_WX, ZHI_CANG,
-    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun,
+    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun, hehun,
     qiYun, daYun, liuNian,
     sunLongitude, solarTermJDN, TERM_NAMES, newMoonJDN,
     GAN, ZHI, ANIMALS, JIANCHU, ORDER, GLOSS, JIANCHU_DATA, deltaT
