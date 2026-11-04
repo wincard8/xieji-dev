@@ -194,3 +194,22 @@ body{
 .mini{font-size:11px;color:var(--ink3)}
 .st{font-size:11.5px;color:var(--ink2);padding:2px 0}
 .st b{color:#2F6B4F}
+
+/* 五行男女 · 合婚 */
+.cp-block{margin-top:10px}
+.cp-lab{font-size:12.5px;color:var(--ink2);margin-bottom:4px}
+.hh-score{text-align:center;padding:12px 0 6px}
+.hh-num{font-size:52px;line-height:1;color:var(--red);font-weight:600}
+.hh-grade{font-size:15px;color:var(--ink);margin-top:4px;letter-spacing:2px}
+.hh-cols{display:flex;gap:10px;margin:10px 0 12px}
+.hh-col{flex:1;background:#FAF5E9;border-radius:8px;padding:8px 10px;text-align:center}
+.hh-bz{font-size:15px;margin:4px 0 2px;letter-spacing:1px}
+.hh-item{display:flex;flex-wrap:wrap;align-items:baseline;padding:8px 0;border-bottom:1px dotted var(--line)}
+.hh-item:last-child{border-bottom:0}
+.hh-mk{width:18px;font-size:13px}
+.hh-item.ok .hh-mk{color:#2F6B4F}
+.hh-item.bad .hh-mk{color:var(--red)}
+.hh-item.flat .hh-mk{color:var(--ink3)}
+.hh-t{font-size:13.5px;color:var(--ink);font-weight:600;flex:1}
+.hh-d{font-size:12.5px;color:var(--ink3)}
+.hh-note{flex-basis:100%;font-size:11.5px;color:var(--ink3);margin:2px 0 0 18px}
