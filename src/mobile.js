@@ -653,12 +653,20 @@
     var score = null;
     if (S.favNow) {
       score = E.scoreOf(r.dayGZ, r.dayZhi, S.favNow, S.unfNow || [], S.th);
-      if (rel) rel.list.forEach(function (x) {
-        if (x.type === '天克地冲') score -= 30;
-        else if (x.type === '冲' && x.pillar === '日') score -= 25;
-        else if (x.type === '冲') score -= 12;
-        else if (x.type === '刑' || x.type === '自刑') score -= 8;
-      });
+      if (rel) {
+        /* 同一柱若天克地冲，只按天克地冲计，不再叠加该柱之冲 */
+        var tkcP = {}, chongP = {};
+        rel.list.forEach(function (x) {
+          if (x.type === '天克地冲') tkcP[x.pillar] = true;
+          else if (x.type === '冲') chongP[x.pillar] = true;
+          else if (x.type === '刑' || x.type === '自刑') score -= 8;
+        });
+        for (var pi = 0; pi < 4; pi++) {
+          var pl = ['年', '月', '日', '时'][pi];
+          if (tkcP[pl]) score -= 30;
+          else if (chongP[pl]) score -= (pl === '日' ? 25 : 12);
+        }
+      }
       score = Math.max(0, Math.min(100, score));
     }
     S.scoreS = score; S.relNow = rel;
@@ -1015,6 +1023,7 @@
         ['调候', '按《穷通宝鉴》该月该日干的原定「主用／次用」。只当值加分（主用＋9/+6，次用＋5/+3），不改写喜忌；与旺衰相左时会红字提示。'],
         ['与命局', '当日日支与你四柱的冲、合、害、刑。有冲或刑，首页顶部出现红条，提示大事宜避。'],
         ['大运 · 流年 · 流月 · 小运', '十年、一年、一月、一岁四级刻度。分数＝喜忌加减＋长生＋冲刑，权重为本程序自定，看相对高低即可，不必当绝对值。'],
+        ['你的分数怎么扣', '底 50：日干逢喜 +14／逢忌 −14，日支逢喜 +10／逢忌 −10；调候主用 +9/+6、次用 +5/+3；再扣冲刑：天克地冲 −30（同柱不再另扣冲）、冲日柱 −25、冲其他柱 −12、刑 −8。吉日本就少，扣得严才是本意。'],
         ['时辰（对你）', '每个时辰取当日时柱（五鼠遁定干）与你命局比：干支五行是否在喜忌、日主在该支的长生、是否冲刑你的四柱。分数高但仍冲日柱者标「慎」——黄黑道是通例，个人分是特例，两者会不一致。']
       ].map(function (d) {
         return '<details class="qitem"><summary>' + d[0] + '</summary>' +
