@@ -523,10 +523,11 @@
     if (dayZhi === SHIDE[season2])
       add('时德', '吉', ['营建', '兴造', '栽种', '般移'], [],
         '时德：与四相同义，四相取天干、时德取地支。春木生火取午、夏火生土取辰、秋金生水取子、冬水生木取寅。其日所宜同四相。');
-    const TIANYUAN = [[0, 6], [0, 10], [1, 9], [2, 0], [3, 1], [4, 6], [0, 2], [2, 4], [7, 3], [4, 4], [0, 0], [9, 7]];
+    /* 天愿：用《协纪》卷五所引「神煞起例」正例（旧历例「传写谬误，二十四字中误十三字」，已为原书所驳） */
+    const TIANYUAN = [[1, 11], [0, 10], [1, 9], [2, 8], [3, 7], [4, 6], [5, 5], [6, 4], [7, 3], [8, 2], [9, 1], [0, 0]];
     if (dayGan === TIANYUAN[mIdx][0] && dayZhi === TIANYUAN[mIdx][1])
       add('天愿', '吉', ['嫁娶', '纳财', '宴会'], [],
-        '天愿：月中善神也，所值之日宜嫁娶、纳财、敦睦亲族。历例：正月甲午、二月甲戌、三月乙酉、四月丙子、五月丁丑、六月戊午、七月甲寅、八月丙辰、九月辛卯、十月戊辰、十一月甲子、十二月癸未。');
+        '天愿：月中善神也，所值之日宜嫁娶、纳财、敦睦亲族。正例（神煞起例）：正月乙亥、二月甲戌、三月乙酉、四月丙申、五月丁未、六月戊午、七月己巳、八月庚辰、九月辛卯、十月壬寅、十一月癸丑、十二月甲子。旧历例「正月甲午…」经原书考订「二十四字中误十三字」，不取。');
     let tianEn = false;
     const dgzIdx = ((dayGan * 6 - dayZhi * 5) % 60 + 60) % 60;
     for (const [a, b] of [[0, 4], [15, 19], [45, 49]]) if (dgzIdx >= a && dgzIdx <= b) tianEn = true;
@@ -574,7 +575,7 @@
     ['起居杂事', ['沐浴', '扫舍', '整容', '剃头', '整手足甲', '入学', '安床', '裁制', '运谋']]
   ];
   const HEAVY = ['月破', '月厌', '劫煞', '灾煞', '月煞', '月刑'];
-  const DE_SHEN = ['天德', '月德', '天德合', '月德合', '天赦', '月恩', '四相'];
+  const DE_SHEN = ['天德', '月德', '天德合', '月德合', '天赦'];
 
   /* --------------------------------------------------------- 时家 */
   // 十二值神（黄黑道）：青龙所临之时支 = (2×日支 + 8) mod 12，余十一神顺行
@@ -617,10 +618,11 @@
   const GRADE_LEVEL = ['大吉', '吉', '平', '小凶', '凶', '大凶'];
   const GRADE_LEVEL_N = [-2, -1, 0, 1, 2, 3];
 
-  /* 取当日等第：表中诸煞取最重者；月破固定最下（卷十「破日…诸事不宜」） */
+  /* 取当日等第：表中诸煞取最重者；月破固定最下（卷十「破日…诸事不宜」）
+     若当日不属月表任一日类，则「无等第」——不判吉凶，不以默认上等冒充大吉 */
   function gradeOf(ss, monthZhi) {
     if (ss.some(s => s.name === '月破')) return { g: 5, from: '月破' };
-    let g = 0, from = null;
+    let g = -1, from = null;
     for (const s of ss) {
       const col = YUEBIAO[s.name];
       if (!col) continue;
@@ -640,6 +642,7 @@
      下  遇德从忌不从宜；不遇诸事皆忌
      下下 遇德亦诸事皆忌 */
   function policyOf(g, hasDe) {
+    if (g < 0) return 'both';          // 无等第：吉神列宜、凶煞列忌，相抵者只列忌
     if (g === 0) return 'yi';
     if (g === 1) return hasDe ? 'yi' : 'both';
     if (g === 2) return hasDe ? 'yi' : 'ji';
@@ -692,8 +695,11 @@
        劫煞另有一条：「寅申月又值六合，止忌（同上五項），餘皆不忌」——故六合亦触发减忌 */
     const hasLiuhe = ss.some(s => s.name === '六合');
     const hasJiesha = ss.some(s => s.name === '劫煞');
+    /* 月恩、四相只在「月建」条与德神并列（卷十原文），不入三煞减忌，也不改判词「遇德」 */
+    const hasYueEn = ss.some(s => s.name === '月恩');
+    const hasSiXiang = ss.some(s => s.name === '四相');
     const deSha = (hasDe || (hasLiuhe && hasJiesha)) && shanSha.length > 0 && !hardPo && !jianDay;
-    const deJian = hasDe && jianDay && !hardPo;
+    const deJian = (hasDe || hasYueEn || hasSiXiang) && jianDay && !hardPo;
 
     for (const s of ss) for (const x of s.ji) push(jiSet, x, s.name);
     if (policy !== 'none') {
@@ -742,10 +748,11 @@
     const yi = Array.from(yiSet).sort(byOrder);
     const ji = Array.from(jiSet).sort(byOrder);
 
-    /* 层级（由等第决定） */
-    const level = GRADE_LEVEL_N[gr.g];
-    const levelText = GRADE_LEVEL[gr.g];
-    const gradeName = GRADE_NAME[gr.g];
+    /* 层级（由等第决定；无等第者不判吉凶） */
+    const noGrade = gr.g < 0;
+    const level = noGrade ? 0 : GRADE_LEVEL_N[gr.g];
+    const levelText = noGrade ? '不判' : GRADE_LEVEL[gr.g];
+    const gradeName = noGrade ? '无等第' : GRADE_NAME[gr.g];
 
     /* 按类归并（忌项多时便于阅读） */
     const groupByCat = tokens => {
@@ -936,10 +943,9 @@
         out.push({ type: '刑', pillar: label, text: '刑' + label + '柱' + ZHI[p.z] });
       if (dayZ === p.z && [4, 6, 9, 11].indexOf(dayZ) >= 0)
         out.push({ type: '自刑', pillar: label, text: '自刑（' + ZHI[dayZ] + '）' });
-      /* 天克地冲：天干相克（无论谁克谁）＋ 地支相冲 */
-      if (dayZ === (p.z + 6) % 12 &&
-        GAN_WX(dayG) !== GAN_WX(p.g) &&
-        (KE(GAN_WX(dayG)) === GAN_WX(p.g) || KE(GAN_WX(p.g)) === GAN_WX(dayG)))
+      /* 天克地冲：日课天干克命局天干（单向）＋ 日课地支冲命局地支
+         择日之「天克地冲」专指日课克命；命克日课为「我克为财」，不作冲论 */
+      if (dayZ === (p.z + 6) % 12 && KE(GAN_WX(dayG)) === GAN_WX(p.g))
         out.push({ type: '天克地冲', pillar: label, text: '天克地冲' + label + '柱（' + GAN[p.g] + ZHI[p.z] + '）' });
     }
     const shi = shiShen(bz.dayMaster, dayG);
@@ -1082,10 +1088,11 @@
   }
 
   /* 月令取格（渊海子平：以日为主，先看提纲；月支取格，乃分贵贱） */
+  /* 注意：劫财为月令时，阳干作「月刃格」，阴干无阳刃，只作「劫财格」（月劫） */
   const GE_NAME = {
     '正官': '正官格', '七杀': '偏官格', '正财': '正财格', '偏财': '偏财格',
     '食神': '食神格', '伤官': '伤官格', '正印': '印绶格', '偏印': '枭神格',
-    '比肩': '建禄格', '劫财': '月刃格'
+    '比肩': '建禄格', '劫财': '劫财格'
   };
   const LU_ZHI = [2, 3, 5, 6, 5, 6, 8, 9, 11, 0];   // 十干禄：甲寅 乙卯 丙巳 丁午 戊巳 己午 庚申 辛酉 壬亥 癸子
   function geJu(bz) {
