@@ -69,7 +69,7 @@
     tsTab: 'yi', thing: 0, days: 60, quoteOpen: -1,
     zodiac: null, zMode: 'range', zMonth: '',
     bY: 1990, bM: 1, bD: 1, bLeap: false, bHz: null, qName: '', bz: null,
-    bMale: true, quiz: null, cp: { a: '', ah: '', b: '', bh: '', res: null },
+    bMale: true, quiz: null, cp: { a: '', ah: '', b: '', bh: '', res: null }, zAvoid: true,
     favManual: null, unfManual: null, wx: null, favNow: null, unfNow: null
   };
   try {
@@ -902,16 +902,36 @@
       '</div>';
   }
 
+  function dayRelBad(r) {
+    var out = { bad: [], hard: false };
+    if (!S.bz) return out;
+    try {
+      var rel = E.dayRelations(r.dayGZ, r.dayZhi, S.bz);
+      rel.list.forEach(function (x) {
+        if (x.type === '天克地冲') { out.bad.push('天克地冲' + x.pillar); out.hard = true; }
+        else if (x.type === '冲' && x.pillar === '日') { out.bad.push('冲日柱'); out.hard = true; }
+        else if (x.type === '冲') out.bad.push('冲' + x.pillar);
+        else if (x.type === '刑' || x.type === '自刑') out.bad.push('刑' + x.pillar);
+      });
+    } catch (e) { }
+    return out;
+  }
+
   function viewZeri() {
     var th = THINGS[S.thing];
     var monthMode = S.zMode === 'month' && /^\d{4}-\d{2}$/.test(S.zMonth || '');
     var list = monthMode ? findGoodMonth(th, S.zMonth) : findGood(th, S.days);
     var rows = list.length ? list.map(function (x) {
+      var warn = '';
+      if (x.rel && x.rel.bad.length) {
+        warn = '<span class="relwarn">' + x.rel.bad.map(function (t) { return esc(t); }).join('·') + '</span>';
+      }
       return '<div class="day-row" data-act="goto:' + x.y + '-' + x.m + '-' + x.d + '">' +
         '<div class="day-d"><b>' + x.d + '</b><span>' + x.m + '月</span></div>' +
-        '<div class="day-info"><b>' + x.week + ' · ' + x.gz + '日</b><p>' + x.lunar + ' · ' + x.jc + ' · ' + x.lv + '</p></div>' +
+        '<div class="day-info"><b>' + x.week + ' · ' + x.gz + '日' + warn + '</b><p>' + x.lunar + ' · ' + x.jc + ' · ' + x.lv + '</p></div>' +
         '<div class="off">' + (x.sc != null ? x.sc + ' 分' : x.lv) + '</div></div>';
     }).join('') : '<div class="empty-tip">' + (monthMode ? '这个月' : '未来 ' + S.days + ' 天内') +
+      (S.zAvoid && S.bz ? '（已排除冲你日柱、天克地冲的日子）' : '') +
       '没有适合「' + th.t + '」的日子，换个事项、月份或放宽天数。</div>';
 
     var things = THINGS.map(function (x, i) {
@@ -929,6 +949,11 @@
       '<div class="hinge" style="margin-top:10px">或查某个月</div>' +
       '<input type="month" id="zmonth" class="dateinput" value="' + (S.zMonth || '') + '"' +
       (monthMode ? ' data-on="1"' : '') + '>' +
+      (S.bz ? '<div class="frow" style="margin-top:10px">' +
+        '<span class="fchip' + (S.zAvoid ? ' on' : '') + '" data-act="zavoid:1">只看与我无冲刑</span>' +
+        '<span class="fchip' + (S.zAvoid ? '' : ' on') + '" data-act="zavoid:0">显示全部</span></div>' +
+        '<div class="mini" style="margin-top:4px">开启后，冲你日柱、天克地冲的日子不再列出（择日首在避冲命主）。</div>'
+        : '<div class="mini" style="margin-top:8px">填了生日后，这里会排除冲你的日子。</div>') +
       '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">宜「' + th.t + '」的日子</div>' +
       '<div class="card-more">' + list.length + ' 天</div></div>' +
@@ -967,9 +992,11 @@
       try { r = E.computeDay(g.year, g.month, g.day); } catch (e) { continue; }
       var hit = th.k.filter(function (k) { return r.yi.indexOf(k) >= 0 && r.ji.indexOf(k) < 0; });
       if (!hit.length) continue;
+      var rl = dayRelBad(r);
+      if (S.zAvoid && S.bz && rl.hard) continue;
       out.push({
         y: g.year, m: g.month, d: g.day, gz: r.dayGZText, jc: r.jianchuName, lv: r.levelText,
-        week: '星期' + r.week, lunar: lunarText(r), n: hit.length, sc: thingScore(r, th)
+        week: '星期' + r.week, lunar: lunarText(r), n: hit.length, sc: thingScore(r, th), rel: rl
       });
     }
     return out.sort(function (a, b) {
@@ -1005,6 +1032,7 @@
       '<div class="dress-txt">历法：北京时间，定朔定气，无中气置闰；年柱以立春、月柱以节为界。1929 年前按当时官历用北京地方平太阳时（约 UTC+7:45），此后用东八区。</div>' +
       '<div class="dress-txt">节气精度：太阳黄经用中精度公式，实测系统偏早 3–8 分钟；交节落在北京时间 00:00–00:10 之间时，日期可能记早一天（如 2014 惊蛰）。朔望用 Meeus 算法，误差在秒级。</div>' +
       '<div class="dress-txt">可靠区间 1900–2100。全部实时推算，没有预生成表；1929 年前中国用平朔与北京地方时，个别农历日可能与旧历书差一天。</div>' +
+      '<div class="dress-txt">时辰口径：子时取 23:00–00:59，<b>晚子时（23:00–23:59）不换日</b>，日柱仍按所填日期；另有流派主「子初换日」算次日，与本程序不同。出生地未作经度校正，时柱按北京时间直取；西部（如乌鲁木齐，实际太阳时约差 2 小时）请自行换算。</div>' +
       '<div class="hr"></div>' +
       '<div class="mini">等第：依卷十「月表」六等（上·上次·中·中次·下·下下）判日，遇德则依判词进退；月破固定最下。判词为「从宜亦从忌」者，两见的条目只列于忌、不再重复列于宜。「止不忌」依原义只从忌中剔出，不列入宜。彭祖百忌为后世俗忌，单列备参、不参与判等。德神取天德、月德、天德合、月德合、天赦，另据卷五月建条补月恩、四相。未实现：时德天愿天恩仅作吉神列示、不入德神，四离四绝往亡归忌等日类，财神福神喜神方位各家口诀不一，不列。</div>' +
       '</div></div>' +
@@ -1384,6 +1412,7 @@
     if (k === 'tab') { S.tab = p[1]; S.sheet = ''; render(); return; }
     if (k === 'thing') { S.thing = +p[1]; render(); return; }
     if (k === 'days') { S.days = +p[1]; render(); return; }
+    if (k === 'zavoid') { S.zAvoid = (p[1] === '1'); render(); return; }
     if (k === 'goto') {
       var q = p[1].split('-').map(Number);
       S.tab = 'home'; go(q[0], q[1], q[2]); return;
