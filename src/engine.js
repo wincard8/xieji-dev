@@ -94,6 +94,48 @@
     return jdn;
   }
 
+  /* 节气瞬时（北京时间）：返回 { jdn: 所在民用日, mins: 当日 0 时起的分钟数 } */
+  const termInstCache = new Map();
+  function solarTermInstant(year, idx) {
+    const key = year * 100 + idx;
+    if (termInstCache.has(key)) return termInstCache.get(key);
+    const target = TERM_LON[idx];
+    let jd = gregorianToJDN(year, 2, 4) + 0.5 + idx * 15.2184;
+    for (let i = 0; i < 60; i++) {
+      const lon = sunLongitude(jd);
+      let diff = target - lon;
+      diff = ((diff + 180) % 360 + 360) % 360 - 180;
+      if (Math.abs(diff) < 1e-9) break;
+      jd += diff / 0.9856473;
+    }
+    const g = jdnToGregorian(Math.floor(jd));
+    const jdUT = jd - deltaT(g.year) / 86400;
+    const bj = jdUT + tzOffsetHours(g.year) / 24 + 0.5;
+    const day = Math.floor(bj);
+    const out = { jdn: day, mins: Math.round((bj - day) * 1440) };
+    termInstCache.set(key, out);
+    return out;
+  }
+
+  /* 出生日 + 时辰，是否落在交节（十二节）的同一个时辰内
+     返回 { name, jdn, mins } 或 null */
+  function termInHour(birthJDN, hourZhi) {
+    if (hourZhi === null || hourZhi === undefined) return null;
+    const g = jdnToGregorian(birthJDN);
+    const startH = hourZhi === 0 ? 23 : 2 * hourZhi - 1;
+    const from = startH * 60, to = from + 120;
+    for (let yy = g.year - 1; yy <= g.year + 1; yy++) {
+      for (let i = 0; i < 24; i += 2) {          // 只查十二节（换柱之用）
+        const t = solarTermInstant(yy, i);
+        if (t.jdn !== birthJDN) continue;
+        if (t.mins >= from && t.mins < to) {
+          return { name: TERM_NAMES[i], jdn: t.jdn, mins: t.mins, hourZhi: hourZhi };
+        }
+      }
+    }
+    return null;
+  }
+
   // 节气标签 (year, i)：i=0 立春（该年 2 月）… i=23 大寒（次年 1 月）
   function termIndexOfJDN(jdn) {
     const { year } = jdnToGregorian(jdn);
@@ -596,6 +638,8 @@
     const s = Math.floor(dgz / 10);
     return [(10 - 2 * s + 12) % 12, (11 - 2 * s + 12) % 12];
   }
+  /* 别名：早先另有一份定义（同义），合并为一处，避免重复声明被后者覆盖 */
+  const xunKongOf = xunKong;
 
   /* --------------------------------------------------------- 卷十「月表」六等
      数据来源：《钦定协纪辨方书》卷十 月表（原书第 220–221 页），
@@ -909,15 +953,20 @@
       dayMaster: dg,
       yearText: r.yearGZText, monthText: r.monthGZText, dayText: r.dayGZText,
       hourText: hz === null ? '' : GAN[hourGan(dg, hz)] + ZHI[hz],
-      jieqi: r.term ? r.term.name : ''
+      jieqi: r.term ? r.term.name : '',
+      /* 生肖按农历年（春节）定，与八字年柱（立春）分开，避免两套口径混用 */
+      shengxiao: (function () {
+        try {
+          const lu = toLunar(gregorianToJDN(y, m, d));
+          return (((lu.year - 1984) % 12) + 12) % 12;
+        } catch (e) { return r.yearGZ % 12; }
+      })()
     };
   }
 
-  /* 旬空：由六十甲子序号定 */
-  function xunKong(idx) {
-    const start = idx - (idx % 10);
-    return [(start + 10) % 12, (start + 11) % 12];
-  }
+  /* 旬空：由六十甲子序号定（与上方 xunKong 同义，保留此实现以免外部引用失配） */
+  /* 注：原此处另有一份 function xunKong(idx)，因重复声明会覆盖前者，已删除；
+     两式等价：[(10-2s)%12,(11-2s)%12] 与 [(start+10)%12,(start+11)%12]。 */
 
   const HE6 = [1, 0, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
   const HAI6 = [7, 6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8];
@@ -1015,18 +1064,22 @@
     });
 
     const strong = ratio >= 0.5;
+    /* 临界带：比例在 0.45–0.55，且「得令+得地+得势」与比例结论相反时不强判 */
+    const deScore = (deLing ? 1 : 0) + deDi + deShi;
+    const unclear = Math.abs(ratio - 0.5) <= 0.05 && ((strong && deScore <= 1) || (!strong && deScore >= 3));
     let fav = strong ? [keMe, woKe, woSheng] : [shengMe, me];
     let unf = strong ? [shengMe, me] : [keMe, woKe, woSheng];
-    const tiaohou = [11, 0, 1].indexOf(bz.month.z) >= 0 ? 1 : ([5, 6, 7].indexOf(bz.month.z) >= 0 ? 4 : -1);
-    if (tiaohou >= 0 && fav.indexOf(tiaohou) < 0) fav = fav.concat([tiaohou]);
+    /* 原来的「冬取火、夏取水」粗调候已移除：它不看日主，且与《穷通宝鉴》逐月条文重复、
+       常与旺衰相反（冬生火多者仍被加火为喜）。调候改由 tiaohouOf() 按原文逐格处理。 */
+    const tiaohou = -1;
     unf = unf.filter(w => fav.indexOf(w) < 0);
 
     return {
       counts: raw.map(v => Math.round(v * 10) / 10),
       force: force.map(v => Math.round(v * 100) / 100),
       ratio: Math.round(ratio * 100) / 100,
-      strong: strong, strengthText: strong ? '身强' : '身弱',
-      deLing: deLing, deDi: deDi, deShi: deShi,
+      strong: strong, strengthText: unclear ? '强弱难定' : (strong ? '身强' : '身弱'), unclear: unclear,
+      deLing: deLing, deDi: deDi, deShi: deShi, deScore: deScore,
       fav: fav, unf: unf, tiaohou: tiaohou,
       favText: fav.map(w => WX_NAME[w]).join('、'),
       unfText: unf.map(w => WX_NAME[w]).join('、')
@@ -1270,8 +1323,8 @@
     const r1 = zhiRel(bzM.day.z, bzF.day.z);
     add('夫妻宫（日支）', r1.d > 0, ZHI[bzM.day.z] + ' 与 ' + ZHI[bzF.day.z] + (r1.k ? ' ' + r1.k : ' 无刑冲合害'), r1.d);
     /* 2 年支（生肖）*/
-    const r2 = zhiRel(bzM.year.z, bzF.year.z);
-    add('生肖（年支）', r2.d > 0, ZHI[bzM.year.z] + ' 与 ' + ZHI[bzF.year.z] + (r2.k ? ' ' + r2.k : ' 无刑冲合害'), Math.round(r2.d * 0.6));
+    const r2 = zhiRel(bzM.shengxiao, bzF.shengxiao);
+    add('生肖（春节口径）', r2.d > 0, ZHI[bzM.shengxiao] + ' 与 ' + ZHI[bzF.shengxiao] + (r2.k ? ' ' + r2.k : ' 无刑冲合害'), Math.round(r2.d * 0.6));
     /* 3 日主五行 */
     const am = GAN_WX(bzM.dayMaster), af = GAN_WX(bzF.dayMaster);
     const SHENG = i => (i + 1) % 5;
@@ -1338,7 +1391,7 @@
   return {
     gregorianToJDN, jdnToGregorian, toLunar, lunarToJDN, lunarMonthsOf, computeDay,
     baziOf, shiShen, dayRelations, xunKong, baziWuxing, scoreOf, WX_NAME, ZHI_WX, ZHI_CANG,
-    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun, hehun,
+    geJu, geJuStatus, liuQin, changSheng, CS_NAMES, yunScore, yongShen, liuYue, xiaoYun, hehun, solarTermInstant, termInHour,
     qiYun, daYun, liuNian,
     sunLongitude, solarTermJDN, TERM_NAMES, newMoonJDN,
     GAN, ZHI, ANIMALS, JIANCHU, ORDER, GLOSS, JIANCHU_DATA, deltaT
