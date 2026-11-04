@@ -118,6 +118,7 @@
   var cache = {};
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
   function isToday() {
     var t = new Date();
     return t.getFullYear() === S.y && t.getMonth() + 1 === S.m && t.getDate() === S.d;
@@ -346,8 +347,7 @@
     return { sc: sc.score, cs: sc.stage, harm: harm };
   }
 
-  function modern(list) {
-    var out = [], seen = {};
+  function modern(list) {    var out = [], seen = {};
     list.forEach(function (t) {
       var m = MODERN[t] || t;
       if (!seen[m]) { seen[m] = 1; out.push({ m: m, t: t }); }
