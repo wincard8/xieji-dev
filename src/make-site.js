@@ -17,6 +17,17 @@ const headTags = [
   '<meta name="mobile-web-app-capable" content="yes">'
 ].join('\n');
 if (!html.includes('apple-touch-icon')) html = html.replace('</head>', headTags + '\n</head>');
+/* 注册 Service Worker：首次访问后写入缓存，断网可用 */
+const swScript = [
+  '<script>',
+  "if ('serviceWorker' in navigator) {",
+  "  window.addEventListener('load', function(){",
+  "    navigator.serviceWorker.register('./sw.js').catch(function(){});",
+  "  });",
+  '}',
+  '</script>'
+].join('\n');
+if (!html.includes("register('./sw.js')")) html = html.replace('</body>', swScript + '\n</body>');
 fs.writeFileSync(path.join(site, 'index.html'), html, 'utf8');
 
 /* 2. manifest */
