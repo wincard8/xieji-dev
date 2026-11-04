@@ -1035,6 +1035,13 @@
       (S.zodiac !== null && S.zodiac !== undefined ? '属' + ANIMALS[S.zodiac] + '（' + ZHI[S.zodiac] + '）' : '未设置') +
       (S.bz ? '　四柱 ' + esc(S.bz.yearText) + ' ' + esc(S.bz.monthText) + ' ' + esc(S.bz.dayText) + (S.bz.hourText ? ' ' + esc(S.bz.hourText) : '') : '') +
       '</div></div></div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">装到 iPhone 主屏幕</div>' +
+      '<div class="card-more">像 App 一样用</div></div><div class="card-body">' +
+      '<div class="dress-txt">两种方式：① 装描述文件，主屏幕自动出现图标；② Safari 分享 →「添加到主屏幕」。' +
+      '点开是全屏黄历，不用再输网址。</div>' +
+      '<button class="btn" data-act="installhelp">查看安装步骤</button>' +
+      '<div class="mini" style="margin-top:8px">iOS 不支持像安卓那样直接装安装包；描述文件未签名，安装时显示「未签名」属正常，内含仅一个网页快捷方式。</div>' +
+      '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">算法与口径</div></div>' +
       '<div class="card-body">' +
       '<div class="dress-txt">宜忌条文出自《钦定协纪辨方书》卷十「宜忌」。建除十二神、月建（土府）、月破（大耗）、月厌、三煞、月刑、月害、大时、天吏、小耗、九空、天德月德、天赦、三合六合，皆按卷十原文与起例推算，每条都可点开看原文。</div>' +
@@ -1509,6 +1516,10 @@
       S.cp = S.cp || {};
       S.cp.mode = (p[1] === 'lunar') ? 'lunar' : 'solar';
       render(); return;
+    }
+    if (k === 'installhelp') {
+      window.open('./install.html', '_blank');
+      return;
     }
     if (k === 'hehun') {
       var cp = S.cp || {};
