@@ -3682,7 +3682,7 @@ window.XiejiQiongtong = {
       '<div class="card"><div class="card-hd"><div class="card-title">五行男女</div>' +
       '<div class="card-more" data-act="sheet:couple">去测 ›</div></div>' +
       '<div class="card-body">' +
-      '<div class="dress-txt">输入两人的生日，推各自八字，再按日支、生肖、日主五行、五行互补、夫妻星、强弱六项算合不合。</div>' +
+      '<div class="dress-txt">输入两人的生日（农历、公历都可），推各自八字，再按日支、生肖、日主五行、五行互补、夫妻星、强弱六项算合不合。</div>' +
       '<button class="btn ghost" data-act="sheet:couple">开始测算</button>' +
       '</div></div>' +
 
@@ -4146,15 +4146,44 @@ window.XiejiQiongtong = {
         '「未尝有以男女年月定妨妻妨夫之说」；卷首奏议且请删去「合婚俗论」。</div>' +
         '<div style="margin-top:4px">此处只按现代通行做法列出六项，<b>权重由本程序自定、无出处</b>，' +
         '仅当参考，不作婚姻判断的依据。</div></div>';
-      var form =
-        '<div class="cp-block"><div class="cp-lab">男方生日（公历）</div>' +
-        '<input type="date" id="cpa" class="dateinput" min="1900-01-01" max="2100-12-31" value="' + esc(cp.a || '') + '">' +
-        '<select class="bsel" id="cpah" style="margin-top:8px;width:100%">' + hsel(cp.ah === undefined ? '' : cp.ah) + '</select></div>' +
-        '<div class="cp-block"><div class="cp-lab">女方生日（公历）</div>' +
-        '<input type="date" id="cpb" class="dateinput" min="1900-01-01" max="2100-12-31" value="' + esc(cp.b || '') + '">' +
-        '<select class="bsel" id="cpbh" style="margin-top:8px;width:100%">' + hsel(cp.bh === undefined ? '' : cp.bh) + '</select></div>' +
+      var mode2 = cp.mode || 'solar';
+      var lunarOf = function (iso) {
+        if (!iso) return null;
+        var p2 = iso.split('-').map(Number);
+        if (p2.length !== 3) return null;
+        try { return E.toLunar(E.gregorianToJDN(p2[0], p2[1], p2[2])); } catch (e) { return null; }
+      };
+      var person = function (key, label) {
+        var iso = cp[key] || '';
+        var hh = '<select class="bsel" id="cp' + key + 'h" style="margin-top:8px;width:100%">' +
+          hsel(cp[key + 'h'] === undefined ? '' : cp[key + 'h']) + '</select>';
+        if (mode2 === 'solar')
+          return '<div class="cp-block"><div class="cp-lab">' + label + '（公历）</div>' +
+            '<input type="date" id="cp' + key + '" class="dateinput" min="1900-01-01" max="2100-12-31" value="' + esc(iso) + '">' + hh + '</div>';
+        var L = lunarOf(iso) || { year: 1990, month: 1, day: 1, leap: false };
+        var ms2 = E.lunarMonthsOf(L.year);
+        var yi2 = '', mo2 = '', dd2 = '';
+        for (var yy2 = 1900; yy2 <= 2100; yy2++) yi2 += '<option value="' + yy2 + '"' + (yy2 === L.year ? ' selected' : '') + '>' + yy2 + '</option>';
+        var mi2 = ms2.findIndex(function (m) { return m.month === L.month && !!m.leap === !!L.leap; });
+        if (mi2 < 0) mi2 = 0;
+        ms2.forEach(function (m, i) {
+          mo2 += '<option value="' + i + '"' + (i === mi2 ? ' selected' : '') + '>' + (m.leap ? '闰' : '') + lunarMonthName(m.month) + '</option>';
+        });
+        var maxD2 = ms2[mi2] ? ms2[mi2].days : 30;
+        for (var d2 = 1; d2 <= maxD2; d2++) dd2 += '<option value="' + d2 + '"' + (d2 === L.day ? ' selected' : '') + '>' + lunarDayName(d2) + '</option>';
+        return '<div class="cp-block"><div class="cp-lab">' + label + '（农历）</div>' +
+          '<div class="birth-row">' +
+          '<select class="bsel" id="cp' + key + 'Y">' + yi2 + '</select>' +
+          '<select class="bsel" id="cp' + key + 'M">' + mo2 + '</select>' +
+          '<select class="bsel" id="cp' + key + 'D">' + dd2 + '</select>' +
+          '</div>' + hh + '</div>';
+      };
+      var modeChips = '<div class="frow" style="margin:2px 0 8px">' +
+        '<span class="fchip' + (mode2 === 'solar' ? ' on' : '') + '" data-act="cpmode:solar">公历</span>' +
+        '<span class="fchip' + (mode2 === 'lunar' ? ' on' : '') + '" data-act="cpmode:lunar">农历</span></div>';
+      var form = modeChips + person('a', '男方生日') + person('b', '女方生日') +
         '<button class="btn" data-act="hehun" style="margin-top:12px">测算</button>' +
-        '<div class="mini" style="margin-top:8px">只填公历生日即可；时辰不确定可留空（四柱只缺时柱，不影响主体判断）。</div>';
+        '<div class="mini" style="margin-top:8px">农历、公历都可填（同一页用同一种历，改历会自动换算）。时辰不确定可留空。</div>';
       var out = '';
       if (cp.res) {
         var res = cp.res, R2 = res.r;
@@ -4331,6 +4360,11 @@ window.XiejiQiongtong = {
     }
     if (k === 'yili') { S.qName = decodeURIComponent(p[1] || ''); S.sheet = 'yili'; render(); return; }
     if (k === 'bmode') { S.bMode = (p[1] === 'solar') ? 'solar' : 'lunar'; render(); return; }
+    if (k === 'cpmode') {
+      S.cp = S.cp || {};
+      S.cp.mode = (p[1] === 'lunar') ? 'lunar' : 'solar';
+      render(); return;
+    }
     if (k === 'hehun') {
       var cp = S.cp || {};
       if (!cp.a || !cp.b) { toast('请先填两人的公历生日'); return; }
@@ -4393,6 +4427,25 @@ window.XiejiQiongtong = {
       else if (id === 'cpb') S.cp.b = e.target.value;
       else if (id === 'cpah') S.cp.ah = e.target.value;
       else S.cp.bh = e.target.value;
+      S.cp.res = null;
+      return;
+    }
+    if (/^cp[ab][YMD]$/.test(id)) {
+      var ck = id.charAt(2);
+      var yEl = document.getElementById('cp' + ck + 'Y');
+      var mEl = document.getElementById('cp' + ck + 'M');
+      var dEl = document.getElementById('cp' + ck + 'D');
+      if (!yEl || !mEl || !dEl) return;
+      var lyy = +yEl.value, lmi = +mEl.value, ldd = +dEl.value;
+      var lms = E.lunarMonthsOf(lyy);
+      var lmm = lms[lmi] || lms[0];
+      var ljdn = E.lunarToJDN(lyy, lmm.month, Math.min(ldd, lmm.days), lmm.leap);
+      if (ljdn === null || ljdn === undefined) return;
+      var lg = E.jdnToGregorian(ljdn);
+      S.cp = S.cp || {};
+      S.cp[ck] = lg.year + '-' + pad(lg.month) + '-' + pad(lg.day);
+      S.cp.res = null;
+      render();
       return;
     }
     if (id === 'bsolar' && e.target.value) {
