@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>装到 iPhone 主屏幕 · 协纪黄历</title>
+<meta name="theme-color" content="#B3202A">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<style>
+:root{--red:#B3202A;--ink:#2B2620;--ink2:#5A5248;--ink3:#8C8378;--line:#E6DFD2;--bg:#F7F2E9;--card:#FFFDF8;--gold:#B08D57}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,"PingFang SC","Songti SC",serif;padding:20px 16px 48px}
+.wrap{max-width:520px;margin:0 auto}
+h1{font-size:22px;margin:6px 0 4px;letter-spacing:1px}
+.sub{color:var(--ink3);font-size:13px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;background:var(--red);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:400}
+.badge.gray{background:#B9AE9B}
+.btn{display:block;text-align:center;background:var(--red);color:#fff;text-decoration:none;border-radius:10px;padding:13px;font-size:16px;margin:12px 0 6px;font-weight:600}
+.btn.ghost{background:#fff;color:var(--red);border:1px solid var(--red)}
+ol,ul{margin:6px 0 0;padding-left:20px}
+li{margin:4px 0}
+.note{font-size:12.5px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.warn{background:#FBF3E4;border:1px solid #E4D2AE;border-left:3px solid var(--gold);border-radius:8px;padding:10px 12px;font-size:12.5px;color:#6B5A3E;margin-top:10px}
+b{font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>装到 iPhone 主屏幕</h1>
+  <div class="sub">两种方式，效果一样：主屏幕一个图标，点开全屏运行，像 App 一样。</div>
+
+  <div class="card">
+    <h2>方式一 · 描述文件<span class="badge">一步到位</span></h2>
+    <p style="margin:4px 0 0">点击下载一个「网页快捷方式」描述文件，安装后主屏幕自动出现图标。</p>
+    <a class="btn" href="./xieji-huangli.mobileconfig">下载安装描述文件</a>
+    <ol>
+      <li>点上面的按钮 → 弹出「此网站正尝试下载一个配置描述文件」→ 点<b>允许</b></li>
+      <li>打开 <b>设置</b> → 顶部出现<b>「已下载描述文件」</b>（或 通用 → VPN与设备管理）</li>
+      <li>点进去 → 右上角<b>安装</b> → 输入锁屏密码 → 再点<b>安装</b></li>
+      <li>回到主屏幕，图标已出现</li>
+    </ol>
+    <div class="warn">
+      <b>关于「未签名」</b>：这个描述文件没有 Apple 开发者签名，安装页会显示「未签名」，属正常。
+      它内部只有一个网页快捷方式（网址 + 图标），<b>不含任何权限、不读取任何数据</b>，可随时删除。
+    </div>
+    <div class="note">删除方法：长按主屏幕图标删除；描述文件在 设置 → 通用 → VPN与设备管理 中移除。</div>
+  </div>
+
+  <div class="card">
+    <h2>方式二 · 添加到主屏幕<span class="badge gray">无需描述文件</span></h2>
+    <ol>
+      <li>用 <b>Safari</b> 打开 <a href="./" style="color:var(--red)">协纪黄历</a>（必须是 Safari，微信内不行）</li>
+      <li>点底部的<b>分享</b>按钮（方框带向上箭头）</li>
+      <li>往下滑，点<b>「添加到主屏幕」</b> → 右上角<b>添加</b></li>
+    </ol>
+    <a class="btn ghost" href="./">先打开协纪黄历</a>
+    <div class="note">这种方式同样会生成图标并全屏运行，只是少了「安装」那几步确认。</div>
+  </div>
+
+  <div class="card">
+    <h2>说明</h2>
+    <p style="margin:4px 0 0;font-size:13.5px;color:var(--ink2)">
+      iOS 不允许像安卓那样直接安装安装包（.apk），所有网页应用都只能通过以上两种方式放到主屏幕。
+      两种方式得到的是同一个东西：一个图标，点开是全屏的黄历，不需要再输网址。
+    </p>
+    <div class="note">本页只是安装说明，不含任何脚本或统计。</div>
+  </div>
+</div>
+</body>
+</html>
