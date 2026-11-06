@@ -225,3 +225,6 @@ body{
 .mbtn{flex:0 0 auto;padding:5px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink2);font-size:12.5px}
 .mbtn.on{background:var(--red);border-color:var(--red);color:#fff}
 .mbtn.act{color:var(--red);border-color:#E7C6C8}
+
+.bsel.need{border-color:var(--red);box-shadow:0 0 0 2px rgba(179,32,42,.12)}
+.bsel[disabled]{opacity:.55}
