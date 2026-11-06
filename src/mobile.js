@@ -77,14 +77,15 @@
     if (_z !== null && _z !== '') S.zodiac = +_z;
     var _zm = localStorage.getItem('xieji.zmonth');
     if (_zm) S.zMonth = _zm;
+    var _pm = localStorage.getItem('xieji.pmode');
+    if (_pm === 'generic' || _pm === 'zodiac' || _pm === 'bazi') S.pMode = _pm;
     var _b = localStorage.getItem('xieji.birth');
     if (_b) {
       var _o = JSON.parse(_b);
       if (_o && _o.bY) {
         S.bY = _o.bY; S.bM = _o.bM; S.bD = _o.bD; S.bLeap = !!_o.bLeap;
-      if (S.bHz === null || S.bHz === undefined) { S.bHz = null; }
-      else S.bHz = +_o.bHz;
-      S.bMale = (_o.male === undefined) ? true : !!_o.male;
+        S.bHz = (_o.bHz === null || _o.bHz === undefined || _o.bHz === '') ? null : +_o.bHz;
+        S.bMale = (_o.male === undefined) ? true : !!_o.male;
       }
     }
     var _f = localStorage.getItem('xieji.favor');
@@ -676,11 +677,12 @@
       score = Math.max(0, Math.min(100, score));
     }
     S.scoreS = score; S.relNow = rel;
+    var pMode = S.pMode || (S.bz ? 'bazi' : 'generic');
     if (isToday()) tags.push('<span class="tag red">今天</span>');
     tags.push('<span class="tag">农历' + esc(r.yearGZText) + '年</span>');
     tags.push('<span class="tag">' + esc(r.jianchuName) + '</span>');
     tags.push('<span class="tag' + (r.level >= 2 ? ' warn' : '') + '">' + esc(r.gradeName) + '·' + esc(r.levelText) + '</span>');
-    if (score !== null) {
+    if (score !== null && pMode === 'bazi') {
       tags.push('<span class="tag' + (score < 40 ? ' warn' : '') + '">对你 ' + score + ' 分</span>');
     }
     r.shensha.forEach(function (s) {
@@ -718,18 +720,39 @@
       return x.type === '冲' || x.type === '天克地冲' || x.type === '刑' || x.type === '自刑';
     }) : [];
     var clash = (S.zodiac !== null && S.zodiac !== undefined && r.dayZhi === (S.zodiac + 6) % 12);
+    var zodiacHarm = '';
+    if (S.zodiac !== null && S.zodiac !== undefined) {
+      var dz = r.dayZhi, sx = S.zodiac;
+      if (dz === (sx + 6) % 12) zodiacHarm = '冲' + ZHI[sx] + '（生肖）';
+      else if (dz === (sx + 3) % 12 || dz === (sx + 9) % 12) zodiacHarm = '刑' + ZHI[sx] + '（生肖）';
+      else if (dz === (sx + 7) % 12 || dz === (sx + 5) % 12) zodiacHarm = '害' + ZHI[sx] + '（生肖）';
+    }
     var alertHtml = '';
-    if (harsh.length) {
-      alertHtml = '<div class="alert">今日' + esc(r.dayGZText) + '日，与你的命局：' +
-        harsh.map(function (x) { return esc(x.text); }).join('、') + '。遇冲刑之日，大事宜避。</div>';
-    } else if (clash) {
-      alertHtml = '<div class="alert">今日冲' + esc(ANIMALS[(r.dayZhi + 6) % 12]) + '（你的生肖），大事宜避；冲煞之日，只宜小事。</div>';
+    if (pMode === 'bazi') {
+      if (harsh.length) {
+        alertHtml = '<div class="alert">今日' + esc(r.dayGZText) + '日，与你的命局：' +
+          harsh.map(function (x) { return esc(x.text); }).join('、') + '。遇冲刑之日，大事宜避。</div>';
+      } else if (clash) {
+        alertHtml = '<div class="alert">今日冲' + esc(ANIMALS[(r.dayZhi + 6) % 12]) + '（你的生肖），大事宜避；冲煞之日，只宜小事。</div>';
+      }
+    } else if (pMode === 'zodiac') {
+      if (zodiacHarm) {
+        alertHtml = '<div class="alert">今日' + esc(r.dayGZText) + '日，' + esc(zodiacHarm) +
+          '。按属相看，此日与你相碍，大事宜避。</div>';
+      }
     }
 
     return '<div class="wrap">' +
       '<div class="datebar"><span>' + S.y + '年' + S.m + '月' + S.d + '日</span>' +
       '<span class="pick" data-act="sheet:birth">选择生日<span class="caret"></span></span>' +
       '<span class="pick" data-act="sheet:cal">选择日期<span class="caret"></span></span></div>' +
+      '<div class="modebar">' +
+      '<span class="mbtn' + (pMode === 'generic' ? ' on' : '') + '" data-act="pmode:generic">通用</span>' +
+      '<span class="mbtn' + (pMode === 'zodiac' ? ' on' : '') + '" data-act="pmode:zodiac">属相</span>' +
+      '<span class="mbtn' + (pMode === 'bazi' ? ' on' : '') + '" data-act="pmode:bazi">八字</span>' +
+      '<span class="mbtn act" data-act="clear">清理缓存</span>' +
+      '<span class="mbtn act" data-act="quit">关闭</span>' +
+      '</div>' +
 
       '<div class="hero"><div class="hero-top">' +
       '<button class="arrow" data-act="prev">‹</button>' +
@@ -749,10 +772,6 @@
       (note.length ? '<div class="xj-note">' + note.join('') + '</div>' : '') +
       '</div>' +
 
-      (S.bz ? '<div class="card"><div class="card-hd"><div class="card-title">命局与今日</div>' +
-        '<div class="card-more">' + esc(S.bz.yearText + ' ' + S.bz.monthText + ' ' + S.bz.dayText + (S.bz.hourText ? ' ' + S.bz.hourText : '')) +
-        '</div></div><div class="card-body" style="padding-top:6px">' + baziHtml(r, rel) + '</div></div>' : '') +
-      '<div class="grid8">' + grid + '</div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">每时必看</div>' +
       '<div class="card-more" data-act="sheet:ts">全部时辰 ›</div></div>' +
       '<div class="card-body">' +
@@ -766,7 +785,7 @@
       '</div>' +
       (function () {
         var hp = hourPersonal(ts);
-        if (!hp) return '';
+        if (!hp || pMode !== 'bazi') return '';
         return '<div class="mini" style="margin-top:8px">对你 <b>' + hp.sc + '</b> 分（' + esc(hp.cs) + '）' +
           (hp.harm.length ? '　<span style="color:#B3202A">慎：' + hp.harm.join('、') + '</span>' : '') + '</div>';
       })() +
@@ -779,6 +798,10 @@
         return '<span class="chip">' + esc(MODERN[w] || w) + '</span>';
       }).join('') + '</div>' +
       '</div></div>' +
+      (S.bz && pMode === 'bazi' ? '<div class="card"><div class="card-hd"><div class="card-title">命局与今日</div>' +
+        '<div class="card-more">' + esc(S.bz.yearText + ' ' + S.bz.monthText + ' ' + S.bz.dayText + (S.bz.hourText ? ' ' + S.bz.hourText : '')) +
+        '</div></div><div class="card-body" style="padding-top:6px">' + baziHtml(r, rel) + '</div></div>' : '') +
+      '<div class="grid8">' + grid + '</div>' +
 
       '<div class="card"><div class="card-hd"><div class="card-title">五行男女</div>' +
       '<div class="card-more" data-act="sheet:couple">去测 ›</div></div>' +
@@ -1519,6 +1542,28 @@
     }
     if (k === 'installhelp') {
       window.open('./install.html', '_blank');
+      return;
+    }
+    if (k === 'pmode') {
+      S.pMode = p[1] === 'zodiac' ? 'zodiac' : (p[1] === 'bazi' ? 'bazi' : 'generic');
+      try { localStorage.setItem('xieji.pmode', S.pMode); } catch (e) { }
+      render(); return;
+    }
+    if (k === 'clear') {
+      try { localStorage.clear(); } catch (e) { }
+      var done = function () { toast('已清理，正在重载'); setTimeout(function () { location.reload(); }, 400); };
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (ks) {
+          return Promise.all(ks.map(function (x) { return caches.delete(x); }));
+        }).then(done).catch(done);
+      } else done();
+      return;
+    }
+    if (k === 'quit') {
+      window.close();
+      setTimeout(function () {
+        toast('浏览器不允许脚本关闭页面，请用系统手势退出');
+      }, 300);
       return;
     }
     if (k === 'hehun') {
