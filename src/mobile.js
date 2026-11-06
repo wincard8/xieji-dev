@@ -1206,18 +1206,36 @@
     }
     if (S.sheet === 'birth') {
       var known = birthKnown();
-      var ms = known ? E.lunarMonthsOf(S.bY) : [];
-      var yOpts = '<option value=""' + (S.bY === null || S.bY === undefined ? ' selected' : '') + '>年不详</option>';
+      var hasYear = !(S.bY === null || S.bY === undefined);
+      var hasMonth = !(S.bM === null || S.bM === undefined);
+      var ms = hasYear ? E.lunarMonthsOf(S.bY) : [];
+      var yOpts = '<option value=""' + (hasYear ? '' : ' selected') + '>年（不详）</option>';
       for (var yy = 2100; yy >= 1900; yy--) yOpts += '<option value="' + yy + '"' + (yy === S.bY ? ' selected' : '') + '>' + yy + ' 年</option>';
-      var mOpts = '<option value=""' + (S.bM === null || S.bM === undefined ? ' selected' : '') + '>月不详</option>' +
-        ms.map(function (m, i) {
-          var on = (m.month === S.bM && !!m.leap === !!S.bLeap);
-          return '<option value="' + i + '"' + (on ? ' selected' : '') + '>' + (m.leap ? '闰' : '') + lunarMonthName(m.month) + '</option>';
-        }).join('');
+      var mOpts;
+      if (!hasYear) {
+        mOpts = '<option value="">先选年</option>';
+      } else {
+        mOpts = '<option value=""' + (hasMonth ? '' : ' selected') + '>月（不详）</option>' +
+          ms.map(function (m, i) {
+            var on = (m.month === S.bM && !!m.leap === !!S.bLeap);
+            return '<option value="' + i + '"' + (on ? ' selected' : '') + '>' + (m.leap ? '闰' : '') + lunarMonthName(m.month) + '</option>';
+          }).join('');
+      }
       var curM = ms.filter(function (m) { return m.month === S.bM && !!m.leap === !!S.bLeap; })[0] || ms[0];
-      var maxD = (S.bM === null || S.bM === undefined) ? 0 : (curM ? curM.days : 30);
-      var dOpts = '<option value=""' + (S.bD === null || S.bD === undefined ? ' selected' : '') + '>日不详</option>';
-      for (var dd = 1; dd <= maxD; dd++) dOpts += '<option value="' + dd + '"' + (dd === S.bD ? ' selected' : '') + '>' + lunarDayName(dd) + '</option>';
+      var maxD = hasMonth ? (curM ? curM.days : 30) : 0;
+      var dOpts;
+      if (!hasMonth) {
+        dOpts = '<option value="">' + (hasYear ? '再选月' : '先选年') + '</option>';
+      } else {
+        dOpts = '<option value=""' + (S.bD === null || S.bD === undefined ? ' selected' : '') + '>日（不详）</option>';
+        for (var dd = 1; dd <= maxD; dd++) dOpts += '<option value="' + dd + '"' + (dd === S.bD ? ' selected' : '') + '>' + lunarDayName(dd) + '</option>';
+      }
+      /* 下一步该点什么：高亮待选的下拉 */
+      var needM = hasYear && !hasMonth;
+      var needD = hasMonth && (S.bD === null || S.bD === undefined);
+      var stepHint = !hasYear
+        ? '先选<b>年份</b>；不知道就留「不详」，黄历按通用显示。'
+        : (!hasMonth ? '已选年，接着选<b>月份</b>。' : (!needD ? '' : '已选年月，接着选<b>日子</b>。'));
       var HRANGE = ['23:00–00:59', '01:00–02:59', '03:00–04:59', '05:00–06:59', '07:00–08:59', '09:00–10:59',
         '11:00–12:59', '13:00–14:59', '15:00–16:59', '17:00–18:59', '19:00–20:59', '21:00–22:59'];
       var hOpts = '<option value=""' + (S.bHz === null || S.bHz === undefined ? ' selected' : '') + '>时辰不详</option>';
@@ -1229,9 +1247,10 @@
         '<span class="fchip' + (mode === 'solar' ? ' on' : '') + '" data-act="bmode:solar">公历</span></div>';
       var lunarRow = '<div class="birth-row">' +
         '<select class="bsel" id="by">' + yOpts + '</select>' +
-        '<select class="bsel" id="bm">' + mOpts + '</select>' +
-        '<select class="bsel" id="bd">' + dOpts + '</select>' +
-        '</div>';
+        '<select class="bsel' + (needM ? ' need' : '') + '" id="bm"' + (hasYear ? '' : ' disabled') + '>' + mOpts + '</select>' +
+        '<select class="bsel' + (needD ? ' need' : '') + '" id="bd"' + (hasMonth ? '' : ' disabled') + '>' + dOpts + '</select>' +
+        '</div>' +
+        (stepHint ? '<div class="mini" style="margin-top:6px">' + stepHint + '</div>' : '');
       var bs0 = birthSolar();
       var solarRow = '<input type="date" id="bsolar" class="dateinput" min="1900-01-01" max="2100-12-31" value="' +
         (bs0 ? bs0.year + '-' + pad(bs0.month) + '-' + pad(bs0.day) : '') + '">';
