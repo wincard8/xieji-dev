@@ -218,3 +218,10 @@ body{
 .hh-note{flex-basis:100%;font-size:11.5px;color:var(--ink3);margin:2px 0 0 18px}
 
 .relwarn{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(179,32,42,.10);color:#8C1620;font-size:11px;font-weight:400}
+
+/* 首页模式条 */
+.modebar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px 2px;-webkit-overflow-scrolling:touch}
+.modebar::-webkit-scrollbar{display:none}
+.mbtn{flex:0 0 auto;padding:5px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink2);font-size:12.5px}
+.mbtn.on{background:var(--red);border-color:var(--red);color:#fff}
+.mbtn.act{color:var(--red);border-color:#E7C6C8}
