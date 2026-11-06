@@ -68,7 +68,7 @@
     tab: 'home', sheet: '', calY: now.getFullYear(), calM: now.getMonth() + 1,
     tsTab: 'yi', thing: 0, days: 60, quoteOpen: -1,
     zodiac: null, zMode: 'range', zMonth: '',
-    bY: 1990, bM: 1, bD: 1, bLeap: false, bHz: null, qName: '', bz: null,
+    bY: null, bM: null, bD: null, bLeap: false, bHz: null, qName: '', bz: null,
     bMale: true, quiz: null, cp: { a: '', ah: '', b: '', bh: '', res: null }, zAvoid: true,
     favManual: null, unfManual: null, wx: null, favNow: null, unfNow: null
   };
@@ -82,8 +82,11 @@
     var _b = localStorage.getItem('xieji.birth');
     if (_b) {
       var _o = JSON.parse(_b);
-      if (_o && _o.bY) {
-        S.bY = _o.bY; S.bM = _o.bM; S.bD = _o.bD; S.bLeap = !!_o.bLeap;
+      if (_o) {
+        S.bY = (_o.bY === null || _o.bY === undefined || _o.bY === '') ? null : +_o.bY;
+        S.bM = (_o.bM === null || _o.bM === undefined || _o.bM === '') ? null : +_o.bM;
+        S.bD = (_o.bD === null || _o.bD === undefined || _o.bD === '') ? null : +_o.bD;
+        S.bLeap = !!_o.bLeap;
         S.bHz = (_o.bHz === null || _o.bHz === undefined || _o.bHz === '') ? null : +_o.bHz;
         S.bMale = (_o.male === undefined) ? true : !!_o.male;
       }
@@ -105,11 +108,18 @@
       }));
     } catch (e) { }
   }
+  function birthKnown() {
+    return S.bY !== null && S.bY !== undefined &&
+      S.bM !== null && S.bM !== undefined &&
+      S.bD !== null && S.bD !== undefined;
+  }
   function birthSolar() {
+    if (!birthKnown()) return null;
     var j = E.lunarToJDN(S.bY, S.bM, S.bD, S.bLeap);
     return j === null ? null : E.jdnToGregorian(j);
   }
   function bzNow() {
+    if (!birthKnown()) return null;
     var j = E.lunarToJDN(S.bY, S.bM, S.bD, S.bLeap);
     if (j === null) return null;
     var g = E.jdnToGregorian(j);
@@ -749,9 +759,8 @@
       '<div class="modebar">' +
       '<span class="mbtn' + (pMode === 'generic' ? ' on' : '') + '" data-act="pmode:generic">通用</span>' +
       '<span class="mbtn' + (pMode === 'zodiac' ? ' on' : '') + '" data-act="pmode:zodiac">属相</span>' +
-      '<span class="mbtn' + (pMode === 'bazi' ? ' on' : '') + '" data-act="pmode:bazi">八字</span>' +
+      '<span class="mbtn' + (pMode === 'bazi' ? ' on' : '') + '" data-act="pmode:bazi">生辰八字</span>' +
       '<span class="mbtn act" data-act="clear">清理缓存</span>' +
-      '<span class="mbtn act" data-act="quit">关闭</span>' +
       '</div>' +
 
       '<div class="hero"><div class="hero-top">' +
@@ -1196,16 +1205,18 @@
       return '<div class="sheet-hd"><span>' + esc(S.qName) + '</span><span class="chip" data-act="closesheet">关闭</span></div>' + body;
     }
     if (S.sheet === 'birth') {
-      var ms = E.lunarMonthsOf(S.bY);
-      var yOpts = '';
+      var known = birthKnown();
+      var ms = known ? E.lunarMonthsOf(S.bY) : [];
+      var yOpts = '<option value=""' + (S.bY === null || S.bY === undefined ? ' selected' : '') + '>年不详</option>';
       for (var yy = 2100; yy >= 1900; yy--) yOpts += '<option value="' + yy + '"' + (yy === S.bY ? ' selected' : '') + '>' + yy + ' 年</option>';
-      var mOpts = ms.map(function (m, i) {
-        var on = (m.month === S.bM && !!m.leap === !!S.bLeap);
-        return '<option value="' + i + '"' + (on ? ' selected' : '') + '>' + (m.leap ? '闰' : '') + lunarMonthName(m.month) + '</option>';
-      }).join('');
+      var mOpts = '<option value=""' + (S.bM === null || S.bM === undefined ? ' selected' : '') + '>月不详</option>' +
+        ms.map(function (m, i) {
+          var on = (m.month === S.bM && !!m.leap === !!S.bLeap);
+          return '<option value="' + i + '"' + (on ? ' selected' : '') + '>' + (m.leap ? '闰' : '') + lunarMonthName(m.month) + '</option>';
+        }).join('');
       var curM = ms.filter(function (m) { return m.month === S.bM && !!m.leap === !!S.bLeap; })[0] || ms[0];
-      var maxD = curM ? curM.days : 30;
-      var dOpts = '';
+      var maxD = (S.bM === null || S.bM === undefined) ? 0 : (curM ? curM.days : 30);
+      var dOpts = '<option value=""' + (S.bD === null || S.bD === undefined ? ' selected' : '') + '>日不详</option>';
       for (var dd = 1; dd <= maxD; dd++) dOpts += '<option value="' + dd + '"' + (dd === S.bD ? ' selected' : '') + '>' + lunarDayName(dd) + '</option>';
       var HRANGE = ['23:00–00:59', '01:00–02:59', '03:00–04:59', '05:00–06:59', '07:00–08:59', '09:00–10:59',
         '11:00–12:59', '13:00–14:59', '15:00–16:59', '17:00–18:59', '19:00–20:59', '21:00–22:59'];
@@ -1580,6 +1591,16 @@
       return;
     }
     if (k === 'savebirth') {
+      if (!birthKnown()) {
+        /* 年/月/日任一不详：只记「不详」，不算八字 */
+        saveBirth();
+        S.bz = null;
+        S.zodiac = null;
+        saveZodiac(null);
+        S.sheet = '';
+        toast('生日已记为「不详」，黄历按通用模式显示');
+        render(); return;
+      }
       var jdnB = E.lunarToJDN(S.bY, S.bM, S.bD, S.bLeap);
       if (jdnB === null) { toast('没找到这个农历日子'); return; }
       var gB = E.jdnToGregorian(jdnB);
@@ -1605,19 +1626,22 @@
       S.zMonth = e.target.value; S.zMode = 'month'; render(); return;
     }
     if (id === 'by') {
+      if (e.target.value === '') { S.bY = null; S.bM = null; S.bD = null; render(); return; }
       S.bY = +e.target.value;
-      var ms1 = E.lunarMonthsOf(S.bY);
-      var cur1 = ms1.filter(function (m) { return m.month === S.bM && !!m.leap === !!S.bLeap; })[0] || ms1[0];
-      if (cur1) { S.bM = cur1.month; S.bLeap = cur1.leap; S.bD = Math.min(S.bD, cur1.days); }
+      S.bM = null; S.bD = null; S.bLeap = false;   /* 月日仍不详，等用户自己选 */
       render(); return;
     }
     if (id === 'bm') {
+      if (e.target.value === '') { S.bM = null; S.bD = null; render(); return; }
       var ms2 = E.lunarMonthsOf(S.bY);
       var m2 = ms2[+e.target.value];
-      if (m2) { S.bM = m2.month; S.bLeap = m2.leap; S.bD = Math.min(S.bD, m2.days); }
+      if (m2) { S.bM = m2.month; S.bLeap = m2.leap; S.bD = null; }   /* 日仍不详 */
       render(); return;
     }
-    if (id === 'bd') { S.bD = +e.target.value; return; }
+    if (id === 'bd') {
+      S.bD = e.target.value === '' ? null : +e.target.value;
+      return;
+    }
     if (id === 'bh') { S.bHz = e.target.value === '' ? null : +e.target.value; return; }
     if (id === 'bg') { S.bMale = e.target.value === '1'; saveBirth(); render(); return; }
     if (id === 'caly') { S.calY = +e.target.value; render(); return; }
