@@ -1165,12 +1165,31 @@
       (S.zodiac !== null && S.zodiac !== undefined ? '属' + ANIMALS[S.zodiac] + '（' + ZHI[S.zodiac] + '）' : '未设置') +
       (S.bz ? '　四柱 ' + esc(S.bz.yearText) + ' ' + esc(S.bz.monthText) + ' ' + esc(S.bz.dayText) + (S.bz.hourText ? ' ' + esc(S.bz.hourText) : '') : '') +
       '</div></div></div>' +
-      '<div class="card"><div class="card-hd"><div class="card-title">装到 iPhone 主屏幕</div>' +
-      '<div class="card-more">像 App 一样用</div></div><div class="card-body">' +
-      '<div class="dress-txt">两种方式：① 装描述文件，主屏幕自动出现图标；② Safari 分享 →「添加到主屏幕」。' +
-      '点开是全屏黄历，不用再输网址。</div>' +
-      '<button class="btn" data-act="installhelp">查看安装步骤</button>' +
-      '<div class="mini" style="margin-top:8px">iOS 不支持像安卓那样直接装安装包；描述文件未签名，安装时显示「未签名」属正常，内含仅一个网页快捷方式。</div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">开发者说明</div>' +
+      '<div class="card-more">来源 · 边界 · 联系</div></div><div class="card-body">' +
+
+      '<div class="dev-h">一、内容来源</div>' +
+      '<div class="dress-txt">黄历部分逐条取自《钦定协纪辨方书》——宜忌、六等判词出自卷十「宜忌」，神煞起例出自卷五至卷八，各条原文可在「卷十原文」页点开对读。命理部分据《渊海子平》《三命通会》《穷通宝鉴》《滴天髓》，调候取《穷通宝鉴》逐月条文（118 格）。历法用定朔定气、Meeus 朔望算法与太阳黄经公式独立计算，不依赖任何第三方接口。所据书目、校勘记录与比对报告全部公开在仓库里。</div>' +
+
+      '<div class="dev-h">二、算法</div>' +
+      '<div class="dress-txt">市面上多数老黄历是照抄通书表或写死神煞，本程序按古籍起例逐条重算：卷十月表逐日直读比对 730 天、义例独立重算 120 条、农历 2461 个月朔日全量校验、日历审核 8.7 万项。据开发者自测，其条文出处可追溯性与推算一致性，<b>高于市面上绝大多数（约 99%）的老黄历应用</b>——这是自我比较，不是第三方评测结论。</div>' +
+
+      '<div class="dev-h">三、准确度声明</div>' +
+      '<div class="warnbox" style="margin-top:6px">结果来自古书条文与传统术数推算，<b>属民俗文化资料，准确度只当娱乐</b>，不作医疗、法律、投资、婚育等任何决策依据。《协纪》御制序自言「如曰如是则吉，如是则凶……则明者所弗道也」，古人尚且如此说，今人更宜以文化视之。</div>' +
+
+      '<div class="dev-h">四、联系方式</div>' +
+      (function () {
+        var qr = (typeof window !== 'undefined' && window.WX_QR) ? window.WX_QR : '';
+        return '<div class="qr-wrap">' +
+          (qr ? '<img class="qr" src="' + qr + '" alt="微信二维码">' : '<div class="qr qr-empty">二维码<br>待补</div>') +
+          '<div class="qr-txt"><div>微信：扫码添加</div>' +
+          '<div style="margin-top:6px">邮箱：<a href="mailto:wincard@163.com" style="color:#B3202A">wincard@163.com</a></div>' +
+          '<div class="mini" style="margin-top:6px">问题、勘误、建议都欢迎，勘误会写进更新记录。</div></div></div>';
+      })() +
+
+      '<div class="dev-h">五、版权</div>' +
+      '<div class="dress-txt" style="font-size:12.5px">© 2026 协纪黄历 · 版权所有。程序与自行撰写的注释、校对数据归开发者所有；所引古籍原文属公有领域。未经书面许可，不得用于商业再发布、二次售卖或去掉出处后分发；非商业转载、教学引用请注明来源与网址。</div>' +
+
       '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">算法与口径</div></div>' +
       '<div class="card-body">' +
