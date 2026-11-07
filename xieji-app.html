@@ -3044,6 +3044,7 @@ window.XiejiQiongtong = {
 
   /* ---------------- 状态 ---------------- */
   var now = new Date();
+  var POSTER_PROMPT = '这种专业的协记黄历，请通俗的解释一下内容：';
   var S = {
     y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate(),
     tab: 'home', sheet: '', calY: now.getFullYear(), calM: now.getMonth() + 1,
@@ -3078,6 +3079,19 @@ window.XiejiQiongtong = {
       if (_fo && _fo.fav && _fo.fav.length) { S.favManual = _fo.fav; S.unfManual = _fo.unf || []; }
     }
   } catch (e) { /* 本地文件可能禁用 localStorage */ }
+  function fallbackCopy(t) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = t;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('已复制');
+    } catch (e) { toast('复制失败，请手动长按选择'); }
+  }
   function saveZodiac(v) {
     S.zodiac = v;
     try { localStorage.setItem('xieji.zodiac', String(v)); } catch (e) { }
@@ -3162,101 +3176,185 @@ window.XiejiQiongtong = {
     return y + lines.length * lh;
   }
 
-  function makePoster(r, score, rel) {
-    var W = 750, H = 1000, dpr = 2;
-    var c = document.createElement('canvas');
-    c.width = W * dpr; c.height = H * dpr;
-    var x = c.getContext('2d');
-    x.scale(dpr, dpr);
-    x.fillStyle = '#F7F2E9'; x.fillRect(0, 0, W, H);
-    x.strokeStyle = '#DCCBA6'; x.lineWidth = 3; x.strokeRect(26, 26, W - 52, H - 52);
-    x.textAlign = 'center';
-    x.fillStyle = '#7A6A52';
-    x.font = '600 24px "Songti SC","SimSun",serif';
-    x.fillText('协 纪 黄 历', W / 2, 92);
-    x.fillStyle = '#2B2620';
-    x.font = '600 40px "Songti SC","SimSun",serif';
-    x.fillText(r.dayGZText + '日', W / 2, 160);
-    x.font = '22px sans-serif';
-    x.fillStyle = '#7A6A52';
-    x.fillText(S.y + '年' + S.m + '月' + S.d + '日 · ' + lunarText(r), W / 2, 196);
+  /* ---------- 海报：把「命局与今日」整张卡画成一张长图 ---------- */
+  function posterSections(r, score, rel) {
+    var out = [];
+    var push = function (k, v) { if (v) out.push({ t: 'kv', k: k, v: String(v) }); };
+    var b = S.bz, wx = S.wx;
 
-    var trad = GRADE_SCORE[r.gradeName] || 70;
+    out.push({ t: 'h1', s: '协 纪 黄 历' });
+    out.push({ t: 'sub', s: S.y + '年' + S.m + '月' + S.d + '日 · ' + lunarText(r) + ' · 星期' + r.week });
+    out.push({ t: 'day', s: r.dayGZText + '日' });
+    out.push({ t: 'meta', s: r.yearGZText + '年 ' + r.monthGZText + '月 · ' + r.jianchuName + ' · ' + r.gradeName + (r.levelText ? '·' + r.levelText : '') });
 
-    /* 传统分 */
-    x.fillStyle = '#8C1620';
-    x.font = '600 88px "Songti SC","SimSun",serif';
-    x.fillText(String(trad), W / 2 - 110, 340);
-    x.font = '24px sans-serif';
-    x.fillStyle = '#7A6A52';
-    x.fillText('传统黄历', W / 2 - 110, 376);
-    x.font = '20px sans-serif';
-    x.fillText(r.gradeName + ' · ' + r.levelText, W / 2 - 110, 404);
-
-    /* 个人分 */
-    x.fillStyle = score < 40 ? '#4A4239' : '#B3202A';
-    x.font = '600 88px "Songti SC","SimSun",serif';
-    x.fillText(String(score), W / 2 + 110, 340);
-    x.font = '24px sans-serif';
-    x.fillStyle = '#7A6A52';
-    x.fillText('你的分数', W / 2 + 110, 376);
-    x.font = '20px sans-serif';
-    x.fillText(S.favNow ? ('喜' + S.favNow.map(function (w) { return E.WX_NAME[w]; }).join('')) : '未设喜忌', W / 2 + 110, 404);
-
-    x.strokeStyle = '#DCCBA6'; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(90, 450); x.lineTo(W - 90, 450); x.stroke();
-
-    /* 结论 */
-    var diff = trad - score;
-    var harsh2 = rel ? rel.list.filter(function (t) { return t.type === '冲' || t.type === '刑' || t.type === '天克地冲' || t.type === '自刑'; }) : [];
-    var head, sub;
-    if (harsh2.length) { head = '今天在冲你的命局'; sub = '传统评分再高，也该避开'; }
-    else if (diff >= 25) { head = '大家都在抢的吉日'; sub = '其实不太适合你'; }
-    else if (diff <= -15) { head = '别人眼里平常的一天'; sub = '对你却有不少助力'; }
-    else { head = '传统与你的看法'; sub = '大体一致'; }
-
-    x.fillStyle = '#2B2620';
-    x.font = '600 38px "Songti SC","SimSun",serif';
-    x.fillText(head, W / 2, 520);
-    x.fillText(sub, W / 2, 578);
-
-    /* 原因 */
-    var reasons = [];
-    if (rel) rel.list.forEach(function (t) {
-      if (t.type === '冲' || t.type === '刑' || t.type === '天克地冲' || t.type === '自刑') reasons.push(t.text);
-    });
-    if (S.favNow) {
-      var ganWx = Math.floor((r.dayGZ % 10) / 2) % 5;
-      var zhiWx = E.ZHI_WX[r.dayZhi];
-      var tg = [];
-      if (S.favNow.indexOf(ganWx) >= 0) tg.push('日干' + E.WX_NAME[ganWx] + '为你所喜');
-      else if (S.unfNow && S.unfNow.indexOf(ganWx) >= 0) tg.push('日干' + E.WX_NAME[ganWx] + '为你所忌');
-      if (S.favNow.indexOf(zhiWx) >= 0) tg.push('日支' + E.WX_NAME[zhiWx] + '为你所喜');
-      else if (S.unfNow && S.unfNow.indexOf(zhiWx) >= 0) tg.push('日支' + E.WX_NAME[zhiWx] + '为你所忌');
-      if (tg.length) reasons.push(tg.join('，'));
+    if (!b) {
+      push('模式', '通用（未填生日，不作个人判断）');
+      return out;
     }
-    if (!reasons.length) reasons.push('与命局无冲刑，五行不违喜忌');
 
-    x.font = '26px sans-serif';
-    x.fillStyle = '#4A4239';
-    var yy = 672;
-    x.fillStyle = '#A2968A';
-    x.font = '20px sans-serif';
-    x.fillText('为什么', W / 2, 640);
-    x.font = '26px sans-serif';
-    x.fillStyle = '#4A4239';
-    reasons.slice(0, 3).forEach(function (t) {
-      x.fillText('· ' + t, W / 2, yy);
-      yy += 46;
+    out.push({ t: 'hr' });
+    push('四柱', b.yearText + '　' + b.monthText + '　' + b.dayText + '　' + (b.hourText || '时辰不详'));
+    if (wx) {
+      push('旺衰', '日主 ' + E.GAN[b.dayMaster] + '（' + wx.strengthText + '·支持 ' + Math.round(wx.ratio * 100) + '%·' +
+        (wx.deLing ? '得令' : '失令') + '·得地' + wx.deDi + '·得势' + wx.deShi + '）');
+    }
+    if (rel) push('今日十神', r.dayGZText + '日，为你的「' + rel.shiShen + '」');
+
+    try {
+      var gj = E.geJu(b), gs = E.geJuStatus(b, gj);
+      var gtxt = gj.name + '（月令' + E.ZHI[gj.zhi] + '·' + (gj.by || '') + '）· ' + gs.verdict + '格';
+      if (gs.reasons && gs.reasons.length) gtxt += '·' + gs.reasons.join('；');
+      push('格局', gtxt);
+      if (gs.bing) push('病药', '病＝' + gs.bing + '，药＝' + gs.yao + '（' + gs.yaoBy + '）');
+    } catch (e) { }
+
+    try {
+      var lq = E.liuQin(b, S.bMale).map(function (x) {
+        return x.role + '·' + x.shi + (x.status ? '（' + x.status + (x.stage ? '·' + x.stage : '') + '）' : '');
+      });
+      push('六亲', lq.join('　'));
+    } catch (e) { }
+
+    try {
+      var y = E.yongShen(E.geJu(b));
+      if (y) push('用神', y.shi + '（' + y.by + '）');
+    } catch (e) { }
+
+    if (wx) {
+      push('五行', '木' + wx.counts[0] + ' 火' + wx.counts[1] + ' 土' + wx.counts[2] + ' 金' + wx.counts[3] + ' 水' + wx.counts[4]);
+      push('喜忌', '喜 ' + (S.favNow || []).map(function (w) { return E.WX_NAME[w]; }).join('') +
+        '　忌 ' + (S.unfNow || []).map(function (w) { return E.WX_NAME[w]; }).join(''));
+    }
+    if (S.th && S.th.cell && S.th.cell.text) {
+      var cell = S.th.cell;
+      push('调候', cell.text.slice(0, 40) + (cell.text.length > 40 ? '…' : '') + '（' + E.GAN[b.dayMaster] + '日·' + (cell.sec || '') + '）');
+    }
+    if (rel && rel.list.length) {
+      push('与命局', rel.list.map(function (x) { return x.text; }).join('、'));
+    }
+    if (score !== null && score !== undefined) push('你的分数', String(score) + ' 分');
+
+    try {
+      var bs = birthSolar();
+      if (bs) {
+        var dy = E.daYun(bs.year, bs.month, bs.day, S.bMale, S.y - bs.year + 1);
+        var ageNow = S.y - bs.year;
+        var cur = dy.list.filter(function (d2) { return ageNow >= d2.from && ageNow < d2.to; })[0] || dy.list[0];
+        var ln = E.liuNian(S.y);
+        var csc = E.yunScore(cur.gan, cur.zhi, b, S.favNow || [], S.unfNow || []);
+        var lsc = E.yunScore(ln.gan, ln.zhi, b, S.favNow || [], S.unfNow || []);
+        push('大运', dy.startAge.toFixed(1) + ' 岁起运（' + (dy.forward ? '顺' : '逆') + '行）　当前 ' + cur.text +
+          '（' + cur.from + '–' + cur.to + ' 岁 · ' + csc.score + ' 分 · ' + csc.stage + '）');
+        push('流年', ln.text + '（' + lsc.score + ' 分 · ' + lsc.stage + '）');
+        push('大运一览', dy.list.map(function (d) {
+          return d.text + E.yunScore(d.gan, d.zhi, b, S.favNow || [], S.unfNow || []).score;
+        }).join(' '));
+        push('流月', E.liuYue(S.y).map(function (m) {
+          return m.month + '月' + m.text + E.yunScore(m.gan, m.zhi, b, S.favNow || [], S.unfNow || []).score;
+        }).join(' '));
+        var age = S.y - bs.year + 1;
+        var xy = E.xiaoYun(age, S.bMale);
+        var xsc = E.yunScore(xy.gan, xy.zhi, b, S.favNow || [], S.unfNow || []);
+        push('小运', xy.text + '（' + S.y + ' 年虚岁 ' + age + ' · ' + xsc.score + ' 分 · ' + xsc.stage + '）');
+      }
+    } catch (e) { }
+    return out;
+  }
+
+  function posterTextOf(sections) {
+    return sections.map(function (s) {
+      if (s.t === 'h1') return '【' + s.s + '】';
+      if (s.t === 'day') return s.s;
+      if (s.t === 'sub' || s.t === 'meta') return s.s;
+      if (s.t === 'hr') return '';
+      return s.k + '：' + s.v;
+    }).filter(Boolean).join('\n');
+  }
+
+  /* 用 SVG 排版再栅格化：比直接 canvas 画中文可靠 */
+  function makePoster(r, score, rel) {
+    var secs = posterSections(r, score, rel);
+    S.posterText = posterTextOf(secs);
+
+    var W = 750, PAD = 46, MAXW = W - PAD * 2;
+    /* 估算字宽：中文按字号，英文数字按 0.56 */
+    function cw(ch, fs) { return /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(ch) ? fs : fs * 0.56; }
+    function wrapBy(text, fs, maxW) {
+      var out = [], cur = '', w = 0;
+      for (var i = 0; i < text.length; i++) {
+        var c = text[i], cwid = cw(c, fs);
+        if (w + cwid > maxW && cur) { out.push(cur); cur = c; w = cwid; }
+        else { cur += c; w += cwid; }
+      }
+      if (cur) out.push(cur);
+      return out;
+    }
+
+    var items = [];   /* {text, fs, color, bold, align, yy} */
+    var y = 96;
+    secs.forEach(function (s) {
+      if (s.t === 'hr') { y += 16; return; }
+      var fs, color, bold = false, align = 'left';
+      if (s.t === 'h1') { fs = 30; color = '#7A6A52'; bold = true; align = 'center'; }
+      else if (s.t === 'sub') { fs = 19; color = '#7A6A52'; align = 'center'; }
+      else if (s.t === 'day') { fs = 52; color = '#B3202A'; bold = true; align = 'center'; }
+      else if (s.t === 'meta') { fs = 21; color = '#4A4239'; align = 'center'; }
+      else { fs = 22; color = '#3A342C'; }
+
+      if (s.t === 'kv') {
+        var kw = 0;
+        for (var i = 0; i < s.k.length + 1; i++) kw += cw(i < s.k.length ? s.k[i] : '：', fs);
+        var lines = wrapBy(s.v, fs, MAXW - kw);
+        items.push({ text: s.k + '：', fs: fs, color: '#A2968A', bold: true, x: PAD, yy: y });
+        lines.forEach(function (ln, idx) {
+          items.push({ text: ln, fs: fs, color: color, x: PAD + kw, yy: y + idx * 33 });
+        });
+        y += Math.max(1, lines.length) * 33;
+      } else {
+        var ls = wrapBy(s.s, fs, MAXW);
+        var lh = s.t === 'day' ? 66 : (s.t === 'h1' ? 44 : 30);
+        ls.forEach(function (ln, idx) {
+          items.push({ text: ln, fs: fs, color: color, bold: bold, align: align, yy: y + idx * lh });
+        });
+        y += ls.length * lh;
+      }
     });
 
-    /* 底 */
-    x.fillStyle = '#A2968A';
-    x.font = '20px sans-serif';
-    x.fillText('四柱 ' + (S.bz ? S.bz.yearText + ' ' + S.bz.monthText + ' ' + S.bz.dayText + (S.bz.hourText ? ' ' + S.bz.hourText : '') : ''), W / 2, 900);
-    x.fillText('wincard8.github.io/huangli', W / 2, 936);
+    var H = Math.max(880, y + 110);
+    S.posterMeta = 'secs=' + secs.length + ' items=' + items.length + ' H=' + H;
 
-    return c.toDataURL('image/png');
+    var esc2 = function (t) {
+      return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    };
+    var svg = ['<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">',
+      '<rect width="' + W + '" height="' + H + '" fill="#F7F2E9"/>',
+      '<rect x="24" y="24" width="' + (W - 48) + '" height="' + (H - 48) + '" fill="none" stroke="#DCCBA6" stroke-width="3"/>'];
+    items.forEach(function (it) {
+      var anchor = it.align === 'center' ? 'middle' : 'start';
+      var xpos = it.align === 'center' ? W / 2 : (it.x || PAD);
+      svg.push('<text x="' + xpos + '" y="' + it.yy + '" fill="' + it.color + '" font-size="' + it.fs + '"' +
+        ' font-family="PingFang SC,Heiti SC,Songti SC,SimSun,serif"' +
+        (it.bold ? ' font-weight="600"' : '') + ' text-anchor="' + anchor + '">' + esc2(it.text) + '</text>');
+    });
+    svg.push('<text x="' + (W / 2) + '" y="' + (H - 56) + '" fill="#A2968A" font-size="18" text-anchor="middle" font-family="PingFang SC,sans-serif">协纪黄历 · 传统历法资料，仅供参考</text>');
+    svg.push('<text x="' + (W / 2) + '" y="' + (H - 28) + '" fill="#A2968A" font-size="18" text-anchor="middle" font-family="PingFang SC,sans-serif">wincard8.github.io/huangli</text>');
+    svg.push('</svg>');
+
+    /* 同步返回一个占位：真正的 PNG 由异步栅格化替换 */
+    try {
+      var blobUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.join(''));
+      var img = new Image();
+      img.onload = function () {
+        var c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        var cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0, W, H);
+        S.poster = c.toDataURL('image/png');
+        if (S.sheet === 'poster') render();
+      };
+      img.src = blobUrl;
+    } catch (e) { }
+    return blobUrl;
   }
 
   /* 事项对应的"得力十神"，用于场景加权（本程序自定口径） */
@@ -3595,7 +3693,6 @@ window.XiejiQiongtong = {
       rows += '<div class="dress-txt">今日旬空 ' + rel.kong.map(function (z) { return ZHI[z]; }).join('') +
         '，落你的' + rel.kongHit.join('、') + '柱。</div>';
     }
-    rows += '<button class="btn ghost" data-act="poster" style="margin-top:10px">生成对比海报</button>';
     /* 大运与流年 */
     var gs = birthSolar();
     if (gs) {
@@ -3636,6 +3733,7 @@ window.XiejiQiongtong = {
           })();
       } catch (e) { }
     }
+    rows += '<button class="btn" data-act="poster" style="margin-top:12px">生成海报，转到豆包或 DeepSeek 分析</button>';
     return '<div class="bazi">' + grid + '</div>' + rows;
   }
 
@@ -4142,11 +4240,21 @@ window.XiejiQiongtong = {
       if (!S.poster) {
         try { S.poster = makePoster(r, S.scoreS, S.relNow); } catch (e) { S.poster = ''; }
       }
-      return '<div class="sheet-hd"><span>对比海报</span><span class="chip" data-act="closesheet">关闭</span></div>' +
+      var PROMPT = POSTER_PROMPT;
+      var DBG = (location.search.indexOf('dbg') >= 0)
+        ? '<pre class="mini" style="white-space:pre-wrap;margin-top:10px">' +
+          esc((S.posterMeta || '') + ' | imglen=' + ((S.poster || '').length)) + '\n' +
+          esc(S.posterText || 'empty') + '</pre>'
+        : '';
+      return '<div class="sheet-hd"><span>生成海报 · 转 AI 分析</span><span class="chip" data-act="closesheet">关闭</span></div>' +
         (S.poster ? '<img src="' + S.poster + '" style="width:100%;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12)">' +
-          '<div class="mini" style="margin-top:10px;text-align:center">长按图片保存，或点按钮下载</div>' +
-          '<a class="btn" download="xieji-compare.png" href="' + S.poster + '" style="display:block;text-align:center;margin-top:10px;text-decoration:none">下载图片</a>'
-          : '<div class="empty-tip">未生成</div>');
+          '<div class="mini" style="margin-top:10px;text-align:center">长按图片可保存；也可用下面按钮一键转发</div>' +
+          '<div class="warnbox" style="margin-top:10px"><b>转发时会附上提示词</b><div style="margin-top:4px">' +
+          esc(PROMPT) + '</div></div>' +
+          '<button class="btn" data-act="shareposter" style="margin-top:10px">转发到豆包 / DeepSeek</button>' +
+          '<button class="btn ghost" data-act="copyprompt" style="margin-top:8px">只复制提示词与文字内容</button>' +
+          '<a class="btn ghost" download="xieji-huangli.png" href="' + S.poster + '" style="display:block;text-align:center;margin-top:8px;text-decoration:none">保存图片到相册</a>'
+          : '<div class="empty-tip">未生成</div>') + DBG;
     }
     if (S.sheet === 'favor') {
       if (!S.favManual) {
@@ -4519,7 +4627,35 @@ window.XiejiQiongtong = {
         S.poster = makePoster(day(), S.scoreS, S.relNow);
         S.sheet = 'poster';
         render();
-      } catch (e) { toast('生成失败：' + e.message); }
+      } catch (e) {
+        toast('生成失败：' + e.message);
+      }
+      return;
+    }
+    if (k === 'copyprompt' || k === 'shareposter') {
+      var full = POSTER_PROMPT + '\n' + (S.posterText || '');
+      var copyIt = function () {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(full).then(function () {
+              toast('提示词与文字已复制，去豆包/DeepSeek 粘贴即可');
+            }).catch(function () { fallbackCopy(full); });
+          } else fallbackCopy(full);
+        } catch (e) { fallbackCopy(full); }
+      };
+      if (k === 'copyprompt') { copyIt(); return; }
+      /* 系统分享：带图片 + 提示词；不支持时退回复制 */
+      fetch(S.poster).then(function (res) { return res.blob(); }).then(function (blob) {
+        var file = new File([blob], 'xieji-huangli.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+          navigator.share({ files: [file], title: '协纪黄历', text: full })
+            .then(function () { toast('已打开分享，选豆包或 DeepSeek'); })
+            .catch(function () { copyIt(); });
+        } else {
+          copyIt();
+          setTimeout(function () { toast('系统不支持带图分享：已复制文字，图片请长按保存'); }, 1200);
+        }
+      }).catch(function () { copyIt(); });
       return;
     }
     if (k === 'wtog') {
