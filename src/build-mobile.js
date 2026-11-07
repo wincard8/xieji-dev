@@ -11,6 +11,15 @@ const mingli = read('mingli-data.js');
 const qiongtong = read('qiongtong-data.js');
 const app = read('mobile.js');
 
+/* 微信二维码：有 wx-qr.png 就内联成 base64，没有就留空（界面显示文字兜底） */
+let qrScript = '<script>window.WX_QR = "";</script>';
+const qrPath = path.join(dir, 'wx-qr.png');
+if (fs.existsSync(qrPath)) {
+  const b64 = fs.readFileSync(qrPath).toString('base64');
+  qrScript = '<script>window.WX_QR = "data:image/png;base64,' + b64 + '";</script>';
+  console.log('二维码已内联', (b64.length / 1024).toFixed(1) + ' KB');
+}
+
 const html = `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -40,6 +49,7 @@ ${mingli}
 <script>
 ${qiongtong}
 </script>
+${qrScript}
 <script>
 ${app}
 </script>
