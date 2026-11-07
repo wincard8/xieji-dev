@@ -228,3 +228,11 @@ body{
 
 .bsel.need{border-color:var(--red);box-shadow:0 0 0 2px rgba(179,32,42,.12)}
 .bsel[disabled]{opacity:.55}
+
+/* 开发者说明 */
+.dev-h{font-weight:600;color:#8C1620;margin:14px 0 4px;font-size:14px}
+.dev-h:first-child{margin-top:2px}
+.qr-wrap{display:flex;gap:14px;align-items:center;margin-top:6px}
+.qr{width:112px;height:112px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#fff}
+.qr-empty{display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--ink3);border-style:dashed}
+.qr-txt{flex:1;font-size:13px;color:var(--ink2);line-height:1.7}
