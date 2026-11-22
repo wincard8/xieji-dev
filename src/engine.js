@@ -695,8 +695,34 @@
     return 'none';
   }
 
+  /* 日期合法性：合法返回 null，否则返回规范化后的 {y,m,d,text} */
+  function badDate(y, m, d) {
+    if (!(y === Math.floor(y) && m === Math.floor(m) && d === Math.floor(d))) {
+      return { y: y, m: m, d: d, text: '日期不是整数' };
+    }
+    if (m < 1 || m > 12 || d < 1 || d > 31) {
+      const t = new Date(Date.UTC(y, m - 1, d));
+      return {
+        y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(),
+        text: y + '-' + m + '-' + d + ' 不是有效日期，已按 ' + t.getUTCFullYear() + '-' +
+          (t.getUTCMonth() + 1) + '-' + t.getUTCDate() + ' 计算'
+      };
+    }
+    const t = new Date(Date.UTC(y, m - 1, d));
+    if (t.getUTCFullYear() !== y || t.getUTCMonth() + 1 !== m || t.getUTCDate() !== d) {
+      return {
+        y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(),
+        text: y + '-' + m + '-' + d + ' 不是有效日期，已按 ' + t.getUTCFullYear() + '-' +
+          (t.getUTCMonth() + 1) + '-' + t.getUTCDate() + ' 计算'
+      };
+    }
+    return null;
+  }
+
   /* --------------------------------------------------------- 主计算 */
   function computeDay(y, m, d) {
+    const bad = badDate(y, m, d);
+    if (bad) { y = bad.y; m = bad.m; d = bad.d; }
     const jdn = gregorianToJDN(y, m, d);
     const lunar = toLunar(jdn);
     const dgz = dayGZ(jdn);
@@ -768,8 +794,8 @@
       for (const t of Array.from(jiSet)) if (!keep.has(t)) jiSet.delete(t);
     }
 
-    /* 百忌日既不属协纪，也从宜集剔除，避免与止不忌相抵 */
-    for (const t of baiji) yiSet.delete(t);
+    /* 百忌只单列（俗忌），不计入宜忌：不从宜中删除，以免改掉《协纪》的结论。
+       若同一事既在宜、又在俗忌，界面并列显示，读者自见两说。 */
 
     /* 依等第处理宜忌相抵 */
     const conflicts = [];
@@ -875,6 +901,7 @@
 
     return {
       solar: { y, m, d }, jdn,
+      dateAdjust: bad,
       week: ['日', '一', '二', '三', '四', '五', '六'][(jdn + 1) % 7],
       lunar, dayGZ: dgz, dayGan, dayZhi, yearGZ: ygz, monthGZ: mgz,
       yearGZText: gz(ygz), monthGZText: gz(mgz.index), dayGZText: gz(dgz),
