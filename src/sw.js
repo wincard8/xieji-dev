@@ -1,10 +1,11 @@
 /* 离线缓存：首次访问后，断网也能打开
    策略：安装时把核心文件塞进缓存；请求先走缓存，再走网络并回填。
    更新：改 VERSION 即触发全量替换。 */
-const VERSION = 'xieji-v1';
+const VERSION = 'xieji-v2';
 const CORE = [
   './',
   './index.html',
+  './yuxiaji.html',
   './manifest.webmanifest',
   './apple-touch-icon.png',
   './icon-192.png',
