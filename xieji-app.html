@@ -257,6 +257,91 @@ body{
 .navbar.appnav .seal{width:30px;height:30px;background:var(--red);color:#fff;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.02;letter-spacing:0;font-family:"Songti SC","STSong",serif;padding-top:1px;box-shadow:0 2px 6px rgba(179,32,42,.28)}
 .navbar.appnav .seal span{display:block}
 
+/* 天气图标（纯 CSS 动画） */
+.wx-i{display:inline-block;position:relative;width:1.05em;height:1.05em;vertical-align:-.18em;flex:none}
+.wx-i.lg{width:1.5em;height:1.5em}
+
+/* 晴：暖圆 + 旋转虚线光圈 */
+.wx-i.sun{border-radius:50%;
+  background:radial-gradient(circle at 36% 34%,#FFE07A 0%,#FFC133 55%,#F59B18 100%);
+  box-shadow:0 0 0 .1em rgba(245,155,24,.18)}
+.wx-i.sun::after{content:"";position:absolute;inset:-.16em;border-radius:50%;
+  border:1.5px dashed rgba(245,155,24,.55);animation:wxspin 9s linear infinite}
+@keyframes wxspin{to{transform:rotate(360deg)}}
+
+/* 云：两团叠加，缓慢漂移 */
+.wx-i.cloud,.wx-i.suncloud,.wx-i.rain,.wx-i.snow,.wx-i.thunder,.wx-i.drizzle,.wx-i.fog{--c:#CBD5DF}
+.wx-i.cloud::before,.wx-i.suncloud::before,.wx-i.rain::before,.wx-i.snow::before,
+.wx-i.thunder::before,.wx-i.drizzle::before{
+  content:"";position:absolute;left:6%;bottom:8%;width:88%;height:46%;border-radius:46%/60%;
+  background:var(--c);animation:wxdrift 4.2s ease-in-out infinite}
+.wx-i.cloud::after,.wx-i.suncloud::after,.wx-i.rain::after,.wx-i.snow::after,
+.wx-i.thunder::after,.wx-i.drizzle::after{
+  content:"";position:absolute;left:26%;bottom:38%;width:44%;height:40%;border-radius:50%;
+  background:#E2E9F0;animation:wxdrift 4.2s ease-in-out infinite .3s}
+@keyframes wxdrift{0%,100%{transform:translateX(0)}50%{transform:translateX(6%)}}
+
+/* 晴间多云：太阳藏在云后 */
+.wx-i.suncloud{background:none}
+.wx-i.suncloud .no{}
+.wx-i.suncloud::before{--c:#CBD5DF;bottom:0}
+.wx-i.suncloud::after{left:58%;bottom:52%;width:34%;height:34%;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#FFE07A,#F59B18);animation:none}
+
+/* 雨：云下三道雨丝 */
+.wx-i.rain::before{--c:#A9B6C4}
+.wx-i.rain::after{background:#CBD5DF}
+.wx-i.rain>.d,.wx-i.snow>.d,.wx-i.drizzle>.d,.wx-i.thunder>.d{position:absolute;inset:0}
+.wx-i.rain>.d::before,.wx-i.rain>.d::after,.wx-i.rain>.d i{
+  content:"";position:absolute;top:66%;width:9%;height:26%;border-radius:40%;
+  background:linear-gradient(180deg,rgba(70,130,200,.95),rgba(70,130,200,.25));
+  animation:wxfall 1.15s linear infinite}
+.wx-i.rain>.d::before{left:24%}
+.wx-i.rain>.d::after{left:46%;animation-delay:.28s}
+.wx-i.rain>.d i{left:68%;animation-delay:.56s}
+@keyframes wxfall{0%{transform:translateY(-10%);opacity:0}25%{opacity:1}100%{transform:translateY(38%);opacity:0}}
+
+/* 毛毛雨：慢速短雨丝 */
+.wx-i.drizzle>.d::before,.wx-i.drizzle>.d::after,.wx-i.drizzle>.d i{
+  content:"";position:absolute;top:70%;width:7%;height:16%;border-radius:40%;
+  background:rgba(90,140,200,.75);animation:wxfall 1.9s linear infinite}
+.wx-i.drizzle>.d::before{left:30%}
+.wx-i.drizzle>.d::after{left:48%;animation-delay:.5s}
+.wx-i.drizzle>.d i{left:66%;animation-delay:1s}
+
+/* 雪：飘落白点 */
+.wx-i.snow::before{--c:#C3CEDB}
+.wx-i.snow>.d::before,.wx-i.snow>.d::after,.wx-i.snow>.d i{
+  content:"";position:absolute;top:66%;width:14%;height:14%;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 1px rgba(150,170,190,.45);animation:wxsnow 2.6s linear infinite}
+.wx-i.snow>.d::before{left:22%}
+.wx-i.snow>.d::after{left:46%;animation-delay:.9s}
+.wx-i.snow>.d i{left:70%;animation-delay:1.7s}
+@keyframes wxsnow{0%{transform:translateY(-20%) scale(.9);opacity:0}30%{opacity:1}100%{transform:translateY(60%) scale(1.05);opacity:0}}
+
+/* 雷：云 + 闪电闪三下 */
+.wx-i.thunder::before{--c:#8E9BAA}
+.wx-i.thunder::after{background:#B7C2CE}
+.wx-i.thunder>.d::before{content:"";position:absolute;left:50%;top:60%;width:0;height:0;
+  transform:translateX(-50%);
+  border-left:.16em solid transparent;border-right:.16em solid transparent;
+  box-shadow:0 0 6px rgba(255,210,60,.8);
+  border-bottom:.55em solid #FFCC33;animation:wxflash 2.2s steps(1) infinite}
+@keyframes wxflash{0%,42%{opacity:0}44%,48%{opacity:1}50%,54%{opacity:0}56%,60%{opacity:1}62%,100%{opacity:0}}
+
+/* 雾：三条横线来回 */
+.wx-i.fog::before{content:"";position:absolute;inset:20% 8% auto 8%;height:12%;border-radius:6px;
+  background:#C3CDD9;box-shadow:0 .32em 0 #C3CDD9,0 .64em 0 #C3CDD9;animation:wxfog 3.4s ease-in-out infinite}
+@keyframes wxfog{0%,100%{transform:translateX(-4%)}50%{transform:translateX(4%)}}
+
+/* 天气条 */
+.wx-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:14px;
+  background:rgba(255,255,255,.75);border:1px solid var(--line);font-size:12.5px;color:var(--ink2);
+  margin-top:7px;line-height:1.6}
+.wx-chip b{color:var(--ink);font-weight:600}
+.wx-chip .wx-city{color:var(--ink3)}
+.wx-hour{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink3)}
+
 </style>
 </head>
 <body>
@@ -3021,6 +3106,215 @@ window.XiejiQiongtong = {
 };
 
 </script>
+<script>
+/* 天气：Open-Meteo（免费、无需密钥、支持跨域）+ 浏览器定位
+   仅在查看最近 7 天时显示；离线时用缓存或隐藏。 */
+(function () {
+  'use strict';
+
+  var KEY = 'xieji.wx';
+  var TTL = 30 * 60 * 1000;
+
+  /* WMO 天气码 → 中文 + 图标类别 */
+  var WMO = {
+    0: ['晴', 'sun'], 1: ['晴间多云', 'sun'], 2: ['多云', 'cloud'], 3: ['阴', 'cloud'],
+    45: ['雾', 'fog'], 48: ['雾凇', 'fog'],
+    51: ['毛毛雨', 'drizzle'], 53: ['毛毛雨', 'drizzle'], 55: ['毛毛雨', 'drizzle'],
+    56: ['冻雨', 'drizzle'], 57: ['冻雨', 'drizzle'],
+    61: ['小雨', 'rain'], 63: ['中雨', 'rain'], 65: ['大雨', 'rain'],
+    66: ['冻雨', 'rain'], 67: ['冻雨', 'rain'],
+    71: ['小雪', 'snow'], 73: ['中雪', 'snow'], 75: ['大雪', 'snow'], 77: ['雪粒', 'snow'],
+    80: ['阵雨', 'rain'], 81: ['阵雨', 'rain'], 82: ['强阵雨', 'rain'],
+    85: ['阵雪', 'snow'], 86: ['阵雪', 'snow'],
+    95: ['雷阵雨', 'thunder'], 96: ['雷阵雨伴冰雹', 'thunder'], 99: ['雷暴伴冰雹', 'thunder']
+  };
+
+  var S = {
+    city: '', lat: null, lon: null, tz: 'Asia/Shanghai',
+    hourly: {}, daily: {}, updated: 0, status: 'idle', err: '', src: ''
+  };
+
+  function load() {
+    try {
+      var o = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (o && o.hourly) {
+        S.city = o.city || ''; S.lat = o.lat; S.lon = o.lon; S.tz = o.tz || S.tz;
+        S.daily = o.daily || {}; S.updated = o.updated || 0; S.status = 'ok';
+        /* 兼容旧缓存：把 2026-11-22T13:00 折成 2026-11-22T13 */
+        S.hourly = {};
+        for (var k in o.hourly) if (Object.prototype.hasOwnProperty.call(o.hourly, k)) S.hourly[k.slice(0, 13)] = o.hourly[k];
+      }
+    } catch (e) { }
+  }
+  function persist() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        city: S.city, lat: S.lat, lon: S.lon, tz: S.tz,
+        hourly: S.hourly, daily: S.daily, updated: S.updated
+      }));
+    } catch (e) { }
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function kOf(y, m, d, h) { return y + '-' + pad(m) + '-' + pad(d) + 'T' + pad(h); }
+
+  /* 定位：先浏览器定位，失败退回 IP 定位 */
+  function geo() {
+    return new Promise(function (resolve, reject) {
+      if (!navigator.geolocation) return reject(new Error('no-geo'));
+      navigator.geolocation.getCurrentPosition(
+        function (p) { resolve({ lat: p.coords.latitude, lon: p.coords.longitude, src: 'gps' }); },
+        function (e) { reject(e); },
+        { timeout: 8000, maximumAge: 10 * 60 * 1000, enableHighAccuracy: false }
+      );
+    });
+  }
+  function ipGeo() {
+    /* ipapi.co 在部分网络下不可达，改用 ipwho.is */
+    return fetch('https://ipwho.is/', { cache: 'no-store' }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || j.success === false || typeof j.latitude !== 'number') throw new Error('ip-fail');
+        return { lat: j.latitude, lon: j.longitude, city: j.city || j.region || '', src: 'ip' };
+      });
+  }
+  function reverse(lat, lon) {
+    return fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat +
+      '&longitude=' + lon + '&localityLanguage=zh', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var c = (j && (j.city || j.locality || j.principalSubdivision)) || '';
+        return c;
+      })
+      .catch(function () { return ''; });
+  }
+
+  function fetchWx() {
+    var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + S.lat + '&longitude=' + S.lon +
+      '&hourly=temperature_2m,weather_code,precipitation_probability' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min' +
+      '&timezone=auto&forecast_days=7';
+    return fetch(u, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.hourly) throw new Error('bad-data');
+      S.tz = j.timezone || S.tz;
+      S.hourly = {}; S.daily = {};
+      var t = j.hourly.time || [];
+      for (var i = 0; i < t.length; i++) {
+        /* API 给的是 2026-11-22T13:00，统一截到小时 */
+        S.hourly[String(t[i]).slice(0, 13)] = {
+          t: j.hourly.temperature_2m ? j.hourly.temperature_2m[i] : null,
+          c: j.hourly.weather_code ? j.hourly.weather_code[i] : 0,
+          p: j.hourly.precipitation_probability ? j.hourly.precipitation_probability[i] : null
+        };
+      }
+      var dt = j.daily && j.daily.time ? j.daily.time : [];
+      for (var k = 0; k < dt.length; k++) {
+        S.daily[dt[k]] = {
+          c: j.daily.weather_code[k],
+          max: j.daily.temperature_2m_max[k],
+          min: j.daily.temperature_2m_min[k]
+        };
+      }
+      S.updated = Date.now();
+      persist();
+    });
+  }
+
+  /* forceGeo=true 才重新定位；已有坐标（含手动设的城市）直接用 */
+  function locateAndFetch(forceGeo) {
+    if (!forceGeo && S.status === 'ok' && S.hourly && (Date.now() - S.updated) < TTL) return Promise.resolve(S);
+    S.status = 'loading'; S.err = '';
+    var p;
+    if (!forceGeo && S.lat !== null && S.lon !== null) {
+      p = Promise.resolve();
+    } else {
+      var denied = false;
+      p = geo().catch(function (e) {
+        denied = true;
+        return ipGeo();
+      }).then(function (o) {
+        S.lat = o.lat; S.lon = o.lon; S.src = o.src; S.updated = 0;
+        if (o.city) { S.city = o.city; return; }
+        return reverse(o.lat, o.lon).then(function (c) { if (c) S.city = c; });
+      }).catch(function (e) {
+        var err = new Error(denied ? '未获得定位权限' : '定位失败');
+        err.cause = e;
+        throw err;
+      });
+    }
+    return p.then(fetchWx).then(function () {
+      S.status = 'ok'; persist(); return S;
+    }).catch(function (e) {
+      S.status = S.hourly && S.updated ? 'stale' : 'error';
+      S.err = (e && e.message) || 'fail';
+      return S;
+    });
+  }
+
+  function setCity(name, lat, lon) {
+    S.city = name; S.lat = lat; S.lon = lon; S.updated = 0;
+    return locateAndFetch(false);   /* 已给坐标，不再定位 */
+  }
+
+  function searchCity(q) {
+    return fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) +
+      '&count=1&language=zh&format=json')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var it = j && j.results && j.results[0];
+        if (!it) throw new Error('no-city');
+        return setCity(it.name + (it.admin1 && it.admin1 !== it.name ? '·' + it.admin1 : ''), it.latitude, it.longitude);
+      });
+  }
+
+  /* ---------- 取数 ---------- */
+  function dayKey(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
+  function forDay(y, m, d) {
+    var dd = S.daily[dayKey(y, m, d)];
+    var nowH = new Date().getHours();
+    var hh = S.hourly[kOf(y, m, d, nowH)] || S.hourly[kOf(y, m, d, 12)];
+    if (!dd && !hh) return null;
+    return {
+      c: dd ? dd.c : (hh ? hh.c : 0),
+      max: dd ? dd.max : null, min: dd ? dd.min : null,
+      t: hh ? hh.t : null, p: hh ? hh.p : null
+    };
+  }
+  /* 时辰：子 23 点起，其余 2h-1 */
+  function forHour(y, m, d, zhi) {
+    var h0 = zhi === 0 ? 23 : 2 * zhi - 1;
+    var a = S.hourly[kOf(y, m, d, h0)], b = S.hourly[kOf(y, m, d, h0 + 1)];
+    if (!a && !b) return null;
+    var pick = a || b;
+    var t = (a && b && a.t != null && b.t != null) ? Math.round((a.t + b.t) / 2) : pick.t;
+    var c = (b && b.c > (a ? a.c : 0)) ? b.c : (a ? a.c : pick.c);
+    return { c: c, t: t, p: pick.p, label: (WMO[c] || ['', 'cloud'])[0] };
+  }
+  function forNow(y, m, d, zhi) {
+    var h = new Date().getHours();
+    var o = S.hourly[kOf(y, m, d, h)];
+    if (!o) return null;
+    return { c: o.c, t: o.t, p: o.p, label: (WMO[o.c] || ['', 'cloud'])[0] };
+  }
+
+  /* ---------- 图标（纯 CSS 动画） ---------- */
+  function icon(kind, big) {
+    var k = kind || 'cloud';
+    var cls = 'wx-i ' + k + (big ? ' lg' : '');
+    var inner = (k === 'rain' || k === 'snow' || k === 'drizzle' || k === 'thunder')
+      ? '<span class="d"><i></i></span>' : '';
+    return '<span class="' + cls + '" aria-hidden="true">' + inner + '</span>';
+  }
+  function text(c) { return (WMO[c] || ['未知', 'cloud'])[0]; }
+  function kindOf(c) { return (WMO[c] || ['', 'cloud'])[1]; }
+
+  window.XWX = {
+    state: S, init: load, load: locateAndFetch, setCity: setCity, searchCity: searchCity,
+    forDay: forDay, forHour: forHour, forNow: forNow, icon: icon, text: text, kindOf: kindOf,
+    fresh: function () { return Date.now() - S.updated < TTL; }
+  };
+})();
+
+</script>
 <script>window.WX_QR = "data:image/png;base64,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";</script>
 <script>
 /* 协纪黄历 · 手机版（单页 App 外壳） */
@@ -3537,6 +3831,33 @@ window.XiejiQiongtong = {
     return out;
   }
 
+  /* ---------------- 天气 ---------------- */
+  function wxReady() {
+    return !!(window.XWX && XWX.state && XWX.state.status === 'ok');
+  }
+  function wxDayChip(r) {
+    if (!wxReady()) return '';
+    var now = new Date();
+    var isToday = (r.solar.y === now.getFullYear() && r.solar.m === now.getMonth() + 1 && r.solar.d === now.getDate());
+    var f = isToday ? XWX.forNow(r.solar.y, r.solar.m, r.solar.d) : XWX.forDay(r.solar.y, r.solar.m, r.solar.d);
+    if (!f) return '';
+    var d = XWX.forDay(r.solar.y, r.solar.m, r.solar.d);
+    var st = XWX.state;
+    var t = (f.t === null || f.t === undefined) ? '' : ' ' + Math.round(f.t) + '°';
+    var range = (d && d.max !== null && d.min !== null)
+      ? ' <span style="color:#A2968A">' + Math.round(d.min) + '~' + Math.round(d.max) + '°</span>' : '';
+    return '<div class="wx-chip">' + XWX.icon(XWX.kindOf(f.c), true) +
+      '<b>' + esc(XWX.text(f.c)) + '</b>' + t + range +
+      '<span class="wx-city">' + esc(st.city || '') + (isToday ? '' : ' · 预报') + '</span></div>';
+  }
+  function wxHourSpan(y, m, d, zhi) {
+    if (!wxReady()) return '';
+    var h = XWX.forHour(y, m, d, zhi);
+    if (!h) return '';
+    var t = (h.t === null || h.t === undefined) ? '' : Math.round(h.t) + '°';
+    return '<span class="wx-hour">' + XWX.icon(XWX.kindOf(h.c)) + t + ' ' + esc(XWX.text(h.c)) + '</span>';
+  }
+
   function renderList(items) {
     if (!items.length) return '<span class="mini">无</span>';
     return items.map(function (x) {
@@ -3915,6 +4236,7 @@ window.XiejiQiongtong = {
       '<button class="arrow" data-act="next">›</button></div>' +
       '<div class="gz-line">' + esc(r.yearGZText) + '年<span class="sep">·</span>' + esc(r.monthGZText) +
       '月<span class="sep">·</span>' + esc(r.dayGZText) + '日<span class="sep">·</span>星期' + esc(r.week) + '</div>' +
+      wxDayChip(r) +
       '<div class="tags">' + tags.join('') + '</div></div>' +
       alertHtml +
       (r.dateAdjust ? '<div class="warnbox" style="margin:0 0 8px">' + esc(r.dateAdjust.text) + '</div>' : '') +
@@ -3932,7 +4254,9 @@ window.XiejiQiongtong = {
       '<div class="card-more" data-act="sheet:ts">全部时辰 ›</div></div>' +
       '<div class="card-body">' +
       '<div class="shichen-now"><div class="sc-name serif">' + esc(ts.gz) + '时</div>' +
-      '<div class="sc-time">' + esc(ts.range) + '</div>' +
+      '<div class="sc-time">' + esc(ts.range) +
+      (wxHourSpan(r.solar.y, r.solar.m, r.solar.d, ts.branch) ? ' · ' + wxHourSpan(r.solar.y, r.solar.m, r.solar.d, ts.branch) : '') +
+      '</div>' +
       '<div class="luck-badge' + (ts.good === '吉' ? '' : ' xiong') + '">' + esc(ts.good) + '</div></div>' +
       '<div class="tri">' +
       '<div class="tri-cell"><div class="tri-v ' + (ts.good === '吉' ? 'good' : '') + '">' + esc(ts.good) + '</div><div class="tri-l">时辰吉凶</div></div>' +
@@ -4239,6 +4563,26 @@ window.XiejiQiongtong = {
       '要<b>有出处、可追溯</b>，看协纪；要<b>民间通书怎么说</b>，看玉匣记。两者都只作民俗资料，不作决策依据。</div>' +
       '<a class="btn" href="./yuxiaji.html" style="display:block;text-align:center;text-decoration:none;margin-top:10px">打开玉匣记黄历</a>' +
       '</div></div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">天气定位</div>' +
+      '<div class="card-more">Open-Meteo</div></div><div class="card-body">' +
+      (function () {
+        var st = (window.XWX && XWX.state) || {};
+        var ok = st.status === 'ok';
+        var line = ok
+          ? '当前：<b>' + esc(st.city || '未知') + '</b>　' +
+            (st.hourly && Object.keys(st.hourly).length ? '已取到未来 7 天逐时预报' : '') +
+            (st.updated ? '　<span class="mini">' + new Date(st.updated).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) + ' 更新</span>' : '')
+          : (st.status === 'loading' ? '正在定位…'
+            : (st.status === 'error' ? '定位失败：' + esc(st.err || '') + '（可手动填城市）' : '尚未定位'));
+        return '<div class="dress-txt">' + line + '</div>' +
+          '<div class="mini" style="margin-top:6px">首页阴历下方显示当天天气，时辰列表显示各时辰天气。仅查看最近 7 天时显示；断网时用上次缓存。</div>' +
+          '<div class="frow" style="margin-top:8px">' +
+          '<input class="dateinput" id="wxc" placeholder="输入城市，如 杭州" style="flex:1" value="">' +
+          '<span class="fchip" data-act="wxcity">查询</span>' +
+          '</div>' +
+          '<button class="btn ghost" data-act="wxrelocate" style="margin-top:8px">自动定位（当前城市）</button>';
+      })() +
+      '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">开发者说明</div>' +
       '<div class="card-more">来源 · 边界 · 联系</div></div><div class="card-body">' +
 
@@ -4523,7 +4867,9 @@ window.XiejiQiongtong = {
           '<div class="ts-gz">' + esc(h.gz) + '</div>' +
           '<div class="ts-time">' + esc(h.range) + '</div>' +
           '<div class="ts-luck ' + (h.good === '吉' ? 'j' : 'x') + '">' + (h.good === '吉' ? '吉' : '凶') + '</div>' +
-          '<div class="ts-yi">冲' + esc(h.chongName) + ' 煞' + esc(h.sha) + ' · ' + esc(h.shen) + '</div>' +
+          '<div class="ts-yi">冲' + esc(h.chongName) + ' 煞' + esc(h.sha) + ' · ' + esc(h.shen) +
+          (wxHourSpan(r.solar.y, r.solar.m, r.solar.d, i) ? '<br>' + wxHourSpan(r.solar.y, r.solar.m, r.solar.d, i) : '') +
+          '</div>' +
           (hp ? '<div style="flex-basis:100%;font-size:11.5px;color:#6B6259;margin:2px 0 0 62px">对你 <b style="color:' +
             (hp.sc >= 60 ? '#B3202A' : '#6B6259') + '">' + hp.sc + '</b> 分（' + esc(hp.cs) + '）' +
             (hp.harm.length ? '　<span style="color:#B3202A">慎：' + hp.harm.join('、') + '</span>' : '') + '</div>' : '') +
@@ -4810,6 +5156,27 @@ window.XiejiQiongtong = {
       window.open('./install.html', '_blank');
       return;
     }
+    if (k === 'wxrelocate' || k === 'wxcity') {
+      if (!window.XWX) { toast('天气模块未加载'); return; }
+      if (k === 'wxrelocate') {
+        toast('正在定位…');
+        XWX.state.lat = null; XWX.state.lon = null;
+        XWX.load(true).then(function () {
+          toast(XWX.state.status === 'ok' ? '天气已更新（' + (XWX.state.city || '') + '）' : '定位失败，请手动填城市');
+          render();
+        });
+        return;
+      }
+      var q = (document.getElementById('wxc') || {}).value || '';
+      q = q.trim();
+      if (!q) { toast('请输入城市名'); return; }
+      toast('查询中…');
+      XWX.searchCity(q).then(function () {
+        toast('已切换到 ' + (XWX.state.city || q));
+        render();
+      }).catch(function () { toast('没找到这个城市'); });
+      return;
+    }
     if (k === 'pmode') {
       S.pMode = p[1] === 'zodiac' ? 'zodiac' : (p[1] === 'bazi' ? 'bazi' : 'generic');
       try { localStorage.setItem('xieji.pmode', S.pMode); } catch (e) { }
@@ -4987,6 +5354,21 @@ window.XiejiQiongtong = {
   window.addEventListener('hashchange', function () { bootHash(); render(); });
 
   render();
+
+  /* 天气：先用缓存渲染一次，再后台更新（失败不影响黄历） */
+  if (window.XWX) {
+    try {
+      XWX.init();
+      if (XWX.state.hourly && Object.keys(XWX.state.hourly).length) render();
+      XWX.load(false).then(function () {
+        try { render(); } catch (e) { }
+      });
+      /* 每 30 分钟刷新一次 */
+      setInterval(function () {
+        XWX.load(true).then(function () { try { render(); } catch (e) { } });
+      }, 30 * 60 * 1000);
+    } catch (e) { }
+  }
 })();
 
 </script>
