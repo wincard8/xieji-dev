@@ -951,8 +951,34 @@ body{
     return 'none';
   }
 
+  /* 日期合法性：合法返回 null，否则返回规范化后的 {y,m,d,text} */
+  function badDate(y, m, d) {
+    if (!(y === Math.floor(y) && m === Math.floor(m) && d === Math.floor(d))) {
+      return { y: y, m: m, d: d, text: '日期不是整数' };
+    }
+    if (m < 1 || m > 12 || d < 1 || d > 31) {
+      const t = new Date(Date.UTC(y, m - 1, d));
+      return {
+        y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(),
+        text: y + '-' + m + '-' + d + ' 不是有效日期，已按 ' + t.getUTCFullYear() + '-' +
+          (t.getUTCMonth() + 1) + '-' + t.getUTCDate() + ' 计算'
+      };
+    }
+    const t = new Date(Date.UTC(y, m - 1, d));
+    if (t.getUTCFullYear() !== y || t.getUTCMonth() + 1 !== m || t.getUTCDate() !== d) {
+      return {
+        y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(),
+        text: y + '-' + m + '-' + d + ' 不是有效日期，已按 ' + t.getUTCFullYear() + '-' +
+          (t.getUTCMonth() + 1) + '-' + t.getUTCDate() + ' 计算'
+      };
+    }
+    return null;
+  }
+
   /* --------------------------------------------------------- 主计算 */
   function computeDay(y, m, d) {
+    const bad = badDate(y, m, d);
+    if (bad) { y = bad.y; m = bad.m; d = bad.d; }
     const jdn = gregorianToJDN(y, m, d);
     const lunar = toLunar(jdn);
     const dgz = dayGZ(jdn);
@@ -1024,8 +1050,8 @@ body{
       for (const t of Array.from(jiSet)) if (!keep.has(t)) jiSet.delete(t);
     }
 
-    /* 百忌日既不属协纪，也从宜集剔除，避免与止不忌相抵 */
-    for (const t of baiji) yiSet.delete(t);
+    /* 百忌只单列（俗忌），不计入宜忌：不从宜中删除，以免改掉《协纪》的结论。
+       若同一事既在宜、又在俗忌，界面并列显示，读者自见两说。 */
 
     /* 依等第处理宜忌相抵 */
     const conflicts = [];
@@ -1131,6 +1157,7 @@ body{
 
     return {
       solar: { y, m, d }, jdn,
+      dateAdjust: bad,
       week: ['日', '一', '二', '三', '四', '五', '六'][(jdn + 1) % 7],
       lunar, dayGZ: dgz, dayGan, dayZhi, yearGZ: ygz, monthGZ: mgz,
       yearGZText: gz(ygz), monthGZText: gz(mgz.index), dayGZText: gz(dgz),
@@ -3454,11 +3481,22 @@ window.XiejiQiongtong = {
     return out;
   }
 
+  /* 现代名去重：营建/兴造 同译「动土」，同列只留一个，原文合并进标题 */
+  function uniqModern(list) {
+    var seen = {}, out = [];
+    list.forEach(function (x) {
+      if (!seen[x.m]) { seen[x.m] = [x.t]; out.push(x); }
+      else seen[x.m].push(x.t);
+    });
+    out.forEach(function (x) { x.t = seen[x.m].join('、'); });
+    return out;
+  }
+
   /* 依等第政策把「宜」「忌」「两见」拆开：政策落在"显示词"这一层，
      避免 修宫室/缮城郭 同译作"修造"这类一词多源造成的假重合 */
   function displayLists(r) {
-    var yi = modern(r.yi).sort(sortCommon);
-    var ji = modern(r.ji).sort(sortCommon);
+    var yi = uniqModern(modern(r.yi)).sort(sortCommon);
+    var ji = uniqModern(modern(r.ji)).sort(sortCommon);
     var jiLabel = {}, yiLabel = {};
     ji.forEach(function (x) { jiLabel[x.m] = 1; });
     yi.forEach(function (x) { yiLabel[x.m] = 1; });
@@ -3479,6 +3517,18 @@ window.XiejiQiongtong = {
     return { yi: yi, ji: ji, both: both, bothCount: bothCount };
   }
 
+  /* 时家宜：按显示名去重，并标出哪些是时神所加（不在当日之宜） */
+  function hourChips(list, r) {
+    var seen = {}, out = [];
+    list.forEach(function (w) {
+      var m = MODERN[w] || w;
+      if (seen[m]) return;
+      seen[m] = 1;
+      out.push({ m: m, t: w, extra: r.yi.indexOf(w) < 0 });
+    });
+    return out;
+  }
+
   function renderList(items) {
     if (!items.length) return '<span class="mini">无</span>';
     return items.map(function (x) {
@@ -3494,12 +3544,12 @@ window.XiejiQiongtong = {
     return ia - ib;
   }
   function yiHtml(r, max) {
-    var arr = modern(r.yi).sort(sortCommon);
+    var arr = uniqModern(modern(r.yi)).sort(sortCommon);
     if (!arr.length) return '<span style="color:#A2968A">诸事不宜</span>';
     return arr.map(function (x) { return '<span title="协纪原文：' + esc(x.t) + '">' + esc(x.m) + '</span>'; }).join('');
   }
   function jiHtml(r, max) {
-    var arr = modern(r.ji).sort(sortCommon);
+    var arr = uniqModern(modern(r.ji)).sort(sortCommon);
     if (!arr.length) return '<span style="color:#A2968A">无忌</span>';
     return arr.map(function (x) { return '<span title="协纪原文：' + esc(x.t) + '">' + esc(x.m) + '</span>'; }).join('');
   }
@@ -3534,8 +3584,8 @@ window.XiejiQiongtong = {
     for (var i = 0; i < days; i++) {
       var jdn = base + i, g = E.jdnToGregorian(jdn), r;
       try { r = E.computeDay(g.year, g.month, g.day); } catch (e) { continue; }
-      var yi = modern(r.yi).sort(sortCommon).map(function (x) { return x.m; });
-      var ji = modern(r.ji).sort(sortCommon).map(function (x) { return x.m; });
+      var yi = uniqModern(modern(r.yi)).sort(sortCommon).map(function (x) { return x.m; });
+      var ji = uniqModern(modern(r.ji)).sort(sortCommon).map(function (x) { return x.m; });
       var sum = lunarText(r) + (yi.length ? ' 宜' + yi.slice(0, 3).join('·') : '') + (ji.length ? ' 忌' + ji.slice(0, 2).join('·') : '');
       var desc = [
         yi.length ? '宜：' + yi.join(' ') : '宜：诸事不宜',
@@ -3576,7 +3626,7 @@ window.XiejiQiongtong = {
         var h = it.h, startH = it.startH;
         var endJdn = startH === 23 ? jdn + 1 : jdn;
         var endH = (startH + 2) % 24;
-        var yi = modern(h.yi).sort(sortCommon).map(function (x) { return x.m; });
+        var yi = uniqModern(modern(h.yi)).sort(sortCommon).map(function (x) { return x.m; });
         var ji = modern(h.ji).sort(sortCommon).map(function (x) { return x.m; });
         var head = yi.slice(0, 2).join('·');
         var sum = h.gz + '时 ' + h.good + ' ' + h.shen + (head ? ' 宜' + head : '');
@@ -3585,7 +3635,7 @@ window.XiejiQiongtong = {
           '冲' + h.chongName + ' · 煞' + h.sha + (h.marks.length ? ' · ' + h.marks.join('·') : ''),
           yi.length ? '宜：' + yi.join(' ') : '宜：诸事不宜（日破时）',
           ji.length ? '时忌：' + ji.join(' ') : '时忌：无',
-          r.ji.length ? '日忌（前八项）：' + modern(r.ji).sort(sortCommon).slice(0, 8).map(function (x) { return x.m; }).join(' ') + ' …' : '日忌：无',
+          r.ji.length ? '日忌（前八项）：' + uniqModern(modern(r.ji)).sort(sortCommon).slice(0, 8).map(function (x) { return x.m; }).join(' ') + ' …' : '日忌：无',
           '建除：' + r.jianchuName + ' · ' + r.levelText + ' · ' + r.dayGZText + '日',
           '依《钦定协纪辨方书》卷十「宜忌」'
         ].join('\n');
@@ -3859,6 +3909,7 @@ window.XiejiQiongtong = {
       '月<span class="sep">·</span>' + esc(r.dayGZText) + '日<span class="sep">·</span>星期' + esc(r.week) + '</div>' +
       '<div class="tags">' + tags.join('') + '</div></div>' +
       alertHtml +
+      (r.dateAdjust ? '<div class="warnbox" style="margin:0 0 8px">' + esc(r.dateAdjust.text) + '</div>' : '') +
       '<div class="yiji">' +
       (r.gradeName === '无等第'
         ? '<div class="warnbox" style="margin:2px 0 8px">本日不属《协纪》月表六等，<b>不作吉凶判定</b>。' +
@@ -3891,9 +3942,13 @@ window.XiejiQiongtong = {
       '<div><div class="pos-v serif">' + esc(ts.marks.length ? ts.marks.join('·') : '—') + '</div><div class="tri-l">时家吉神</div></div>' +
       '<div><div class="pos-v serif">' + esc(ts.isKong ? '空亡' : '不空') + '</div><div class="tri-l">旬空</div></div>' +
       '</div>' +
-      '<div class="chips">' + ts.yi.map(function (w) {
-        return '<span class="chip">' + esc(MODERN[w] || w) + '</span>';
+      '<div class="chips">' + hourChips(ts.yi, r).map(function (c) {
+        return '<span class="chip"' + (c.extra ? ' title="时家吉神所加，非当日之宜"' : '') + '>' +
+          (c.extra ? '＋' : '') + esc(c.m) + '</span>';
       }).join('') + '</div>' +
+      (hourChips(ts.yi, r).some(function (c) { return c.extra; })
+        ? '<div class="mini" style="margin-top:6px">＋ 为时家吉神所加（日禄、贵人、驿马、六合），当日之宜里没有</div>'
+        : '') +
       '</div></div>' +
       (S.bz && pMode === 'bazi' ? '<div class="card"><div class="card-hd"><div class="card-title">命局与今日</div>' +
         '<div class="card-more">' + esc(S.bz.yearText + ' ' + S.bz.monthText + ' ' + S.bz.dayText + (S.bz.hourText ? ' ' + S.bz.hourText : '')) +
@@ -4444,7 +4499,10 @@ window.XiejiQiongtong = {
             (hp.sc >= 60 ? '#B3202A' : '#6B6259') + '">' + hp.sc + '</b> 分（' + esc(hp.cs) + '）' +
             (hp.harm.length ? '　<span style="color:#B3202A">慎：' + hp.harm.join('、') + '</span>' : '') + '</div>' : '') +
           '<div style="flex-basis:100%;font-size:12px;color:#6B6259;margin:2px 0 0 62px">' +
-          (h.yi.length ? '<b style="font-weight:400;color:#A2968A">宜 </b>' + h.yi.map(function (w) { return esc(MODERN[w] || w); }).join('、') : '<span style="color:#A2968A">诸事不宜</span>') +
+          (h.yi.length ? '<b style="font-weight:400;color:#A2968A">宜 </b>' + hourChips(h.yi, r).map(function (c) {
+            return (c.extra ? '＋' : '') + esc(c.m);
+          }).join('、') : '<span style="color:#A2968A">诸事不宜</span>') +
+          (hourChips(h.yi, r).some(function (c) { return c.extra; }) ? '　<span style="color:#A2968A">＋时神所加</span>' : '') +
           '</div></div>';
       }).join('');
       return '<div class="sheet-hd"><span>十二时辰</span><span class="chip" data-act="closesheet">关闭</span></div>' + rows +
@@ -4849,6 +4907,14 @@ window.XiejiQiongtong = {
     }
   });
 
+  /* 网址参数白名单：只接受已知取值，避免任意字符串写入状态 */
+  var SHEET_OK = ['birth', 'cal', 'ts', 'couple', 'quiz', 'favor', 'poster', 'quote', 'yili'];
+  function ymdOK(y, m, d) {
+    if (!(y >= 1900 && y <= 2100)) return false;
+    var t = new Date(Date.UTC(y, m - 1, d));
+    return t.getUTCFullYear() === y && t.getUTCMonth() + 1 === m && t.getUTCDate() === d;
+  }
+
   function bootHash() {
     var h = (location.hash || '').replace(/^#/, '');
     if (!h) return false;
@@ -4857,19 +4923,26 @@ window.XiejiQiongtong = {
       var kv = seg.split('=');
       var k = kv[0], v = kv[1];
       if (k === 'tab' && TITLES[v]) { S.tab = v; any = true; }
-      else if (k === 'sheet') { S.sheet = v; any = true; }
+      else if (k === 'sheet' && SHEET_OK.indexOf(v) >= 0) { S.sheet = v; any = true; }
       else if (k === 'date' && v) {
         var p = v.split('-').map(Number);
-        if (p.length === 3) { S.y = p[0]; S.m = p[1]; S.d = p[2]; S.calY = p[0]; S.calM = p[1]; any = true; }
+        if (p.length === 3) {
+          if (ymdOK(p[0], p[1], p[2])) {
+            S.y = p[0]; S.m = p[1]; S.d = p[2]; S.calY = p[0]; S.calM = p[1]; any = true;
+          } else {
+            toast('网址里的日期 ' + v + ' 无效，已忽略');
+          }
+        }
       } else if (k === 'birth' && v) {
         var q = v.split('-').map(Number);
         if (q.length >= 3) {
+          if (!ymdOK(q[0], q[1], q[2])) { toast('网址里的生日 ' + v + ' 无效，已忽略'); return; }
           try {
             S.bz = E.baziOf(q[0], q[1], q[2], q.length > 3 ? q[3] : null);
             S.zodiac = S.bz.shengxiao;
             var _lu = E.toLunar(E.gregorianToJDN(q[0], q[1], q[2]));
             S.bY = _lu.year; S.bM = _lu.month; S.bD = _lu.day; S.bLeap = !!_lu.leap;
-            if (q.length > 3) S.bHz = q[3];
+            if (q.length > 3 && q[3] >= 0 && q[3] <= 11) S.bHz = q[3];
             any = true;
           } catch (e) { }
         }
