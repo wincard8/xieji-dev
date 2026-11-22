@@ -1,0 +1,84 @@
+/* 天气图标（纯 CSS 动画） */
+.wx-i{display:inline-block;position:relative;width:1.05em;height:1.05em;vertical-align:-.18em;flex:none}
+.wx-i.lg{width:1.5em;height:1.5em}
+
+/* 晴：暖圆 + 旋转虚线光圈 */
+.wx-i.sun{border-radius:50%;
+  background:radial-gradient(circle at 36% 34%,#FFE07A 0%,#FFC133 55%,#F59B18 100%);
+  box-shadow:0 0 0 .1em rgba(245,155,24,.18)}
+.wx-i.sun::after{content:"";position:absolute;inset:-.16em;border-radius:50%;
+  border:1.5px dashed rgba(245,155,24,.55);animation:wxspin 9s linear infinite}
+@keyframes wxspin{to{transform:rotate(360deg)}}
+
+/* 云：两团叠加，缓慢漂移 */
+.wx-i.cloud,.wx-i.suncloud,.wx-i.rain,.wx-i.snow,.wx-i.thunder,.wx-i.drizzle,.wx-i.fog{--c:#CBD5DF}
+.wx-i.cloud::before,.wx-i.suncloud::before,.wx-i.rain::before,.wx-i.snow::before,
+.wx-i.thunder::before,.wx-i.drizzle::before{
+  content:"";position:absolute;left:6%;bottom:8%;width:88%;height:46%;border-radius:46%/60%;
+  background:var(--c);animation:wxdrift 4.2s ease-in-out infinite}
+.wx-i.cloud::after,.wx-i.suncloud::after,.wx-i.rain::after,.wx-i.snow::after,
+.wx-i.thunder::after,.wx-i.drizzle::after{
+  content:"";position:absolute;left:26%;bottom:38%;width:44%;height:40%;border-radius:50%;
+  background:#E2E9F0;animation:wxdrift 4.2s ease-in-out infinite .3s}
+@keyframes wxdrift{0%,100%{transform:translateX(0)}50%{transform:translateX(6%)}}
+
+/* 晴间多云：太阳藏在云后 */
+.wx-i.suncloud{background:none}
+.wx-i.suncloud .no{}
+.wx-i.suncloud::before{--c:#CBD5DF;bottom:0}
+.wx-i.suncloud::after{left:58%;bottom:52%;width:34%;height:34%;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#FFE07A,#F59B18);animation:none}
+
+/* 雨：云下三道雨丝 */
+.wx-i.rain::before{--c:#A9B6C4}
+.wx-i.rain::after{background:#CBD5DF}
+.wx-i.rain>.d,.wx-i.snow>.d,.wx-i.drizzle>.d,.wx-i.thunder>.d{position:absolute;inset:0}
+.wx-i.rain>.d::before,.wx-i.rain>.d::after,.wx-i.rain>.d i{
+  content:"";position:absolute;top:66%;width:9%;height:26%;border-radius:40%;
+  background:linear-gradient(180deg,rgba(70,130,200,.95),rgba(70,130,200,.25));
+  animation:wxfall 1.15s linear infinite}
+.wx-i.rain>.d::before{left:24%}
+.wx-i.rain>.d::after{left:46%;animation-delay:.28s}
+.wx-i.rain>.d i{left:68%;animation-delay:.56s}
+@keyframes wxfall{0%{transform:translateY(-10%);opacity:0}25%{opacity:1}100%{transform:translateY(38%);opacity:0}}
+
+/* 毛毛雨：慢速短雨丝 */
+.wx-i.drizzle>.d::before,.wx-i.drizzle>.d::after,.wx-i.drizzle>.d i{
+  content:"";position:absolute;top:70%;width:7%;height:16%;border-radius:40%;
+  background:rgba(90,140,200,.75);animation:wxfall 1.9s linear infinite}
+.wx-i.drizzle>.d::before{left:30%}
+.wx-i.drizzle>.d::after{left:48%;animation-delay:.5s}
+.wx-i.drizzle>.d i{left:66%;animation-delay:1s}
+
+/* 雪：飘落白点 */
+.wx-i.snow::before{--c:#C3CEDB}
+.wx-i.snow>.d::before,.wx-i.snow>.d::after,.wx-i.snow>.d i{
+  content:"";position:absolute;top:66%;width:14%;height:14%;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 1px rgba(150,170,190,.45);animation:wxsnow 2.6s linear infinite}
+.wx-i.snow>.d::before{left:22%}
+.wx-i.snow>.d::after{left:46%;animation-delay:.9s}
+.wx-i.snow>.d i{left:70%;animation-delay:1.7s}
+@keyframes wxsnow{0%{transform:translateY(-20%) scale(.9);opacity:0}30%{opacity:1}100%{transform:translateY(60%) scale(1.05);opacity:0}}
+
+/* 雷：云 + 闪电闪三下 */
+.wx-i.thunder::before{--c:#8E9BAA}
+.wx-i.thunder::after{background:#B7C2CE}
+.wx-i.thunder>.d::before{content:"";position:absolute;left:50%;top:60%;width:0;height:0;
+  transform:translateX(-50%);
+  border-left:.16em solid transparent;border-right:.16em solid transparent;
+  box-shadow:0 0 6px rgba(255,210,60,.8);
+  border-bottom:.55em solid #FFCC33;animation:wxflash 2.2s steps(1) infinite}
+@keyframes wxflash{0%,42%{opacity:0}44%,48%{opacity:1}50%,54%{opacity:0}56%,60%{opacity:1}62%,100%{opacity:0}}
+
+/* 雾：三条横线来回 */
+.wx-i.fog::before{content:"";position:absolute;inset:20% 8% auto 8%;height:12%;border-radius:6px;
+  background:#C3CDD9;box-shadow:0 .32em 0 #C3CDD9,0 .64em 0 #C3CDD9;animation:wxfog 3.4s ease-in-out infinite}
+@keyframes wxfog{0%,100%{transform:translateX(-4%)}50%{transform:translateX(4%)}}
+
+/* 天气条 */
+.wx-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:14px;
+  background:rgba(255,255,255,.75);border:1px solid var(--line);font-size:12.5px;color:var(--ink2);
+  margin-top:7px;line-height:1.6}
+.wx-chip b{color:var(--ink);font-weight:600}
+.wx-chip .wx-city{color:var(--ink3)}
+.wx-hour{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink3)}
