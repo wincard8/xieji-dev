@@ -512,6 +512,33 @@
     return out;
   }
 
+  /* ---------------- 天气 ---------------- */
+  function wxReady() {
+    return !!(window.XWX && XWX.state && XWX.state.status === 'ok');
+  }
+  function wxDayChip(r) {
+    if (!wxReady()) return '';
+    var now = new Date();
+    var isToday = (r.solar.y === now.getFullYear() && r.solar.m === now.getMonth() + 1 && r.solar.d === now.getDate());
+    var f = isToday ? XWX.forNow(r.solar.y, r.solar.m, r.solar.d) : XWX.forDay(r.solar.y, r.solar.m, r.solar.d);
+    if (!f) return '';
+    var d = XWX.forDay(r.solar.y, r.solar.m, r.solar.d);
+    var st = XWX.state;
+    var t = (f.t === null || f.t === undefined) ? '' : ' ' + Math.round(f.t) + '°';
+    var range = (d && d.max !== null && d.min !== null)
+      ? ' <span style="color:#A2968A">' + Math.round(d.min) + '~' + Math.round(d.max) + '°</span>' : '';
+    return '<div class="wx-chip">' + XWX.icon(XWX.kindOf(f.c), true) +
+      '<b>' + esc(XWX.text(f.c)) + '</b>' + t + range +
+      '<span class="wx-city">' + esc(st.city || '') + (isToday ? '' : ' · 预报') + '</span></div>';
+  }
+  function wxHourSpan(y, m, d, zhi) {
+    if (!wxReady()) return '';
+    var h = XWX.forHour(y, m, d, zhi);
+    if (!h) return '';
+    var t = (h.t === null || h.t === undefined) ? '' : Math.round(h.t) + '°';
+    return '<span class="wx-hour">' + XWX.icon(XWX.kindOf(h.c)) + t + ' ' + esc(XWX.text(h.c)) + '</span>';
+  }
+
   function renderList(items) {
     if (!items.length) return '<span class="mini">无</span>';
     return items.map(function (x) {
@@ -890,6 +917,7 @@
       '<button class="arrow" data-act="next">›</button></div>' +
       '<div class="gz-line">' + esc(r.yearGZText) + '年<span class="sep">·</span>' + esc(r.monthGZText) +
       '月<span class="sep">·</span>' + esc(r.dayGZText) + '日<span class="sep">·</span>星期' + esc(r.week) + '</div>' +
+      wxDayChip(r) +
       '<div class="tags">' + tags.join('') + '</div></div>' +
       alertHtml +
       (r.dateAdjust ? '<div class="warnbox" style="margin:0 0 8px">' + esc(r.dateAdjust.text) + '</div>' : '') +
@@ -907,7 +935,9 @@
       '<div class="card-more" data-act="sheet:ts">全部时辰 ›</div></div>' +
       '<div class="card-body">' +
       '<div class="shichen-now"><div class="sc-name serif">' + esc(ts.gz) + '时</div>' +
-      '<div class="sc-time">' + esc(ts.range) + '</div>' +
+      '<div class="sc-time">' + esc(ts.range) +
+      (wxHourSpan(r.solar.y, r.solar.m, r.solar.d, ts.branch) ? ' · ' + wxHourSpan(r.solar.y, r.solar.m, r.solar.d, ts.branch) : '') +
+      '</div>' +
       '<div class="luck-badge' + (ts.good === '吉' ? '' : ' xiong') + '">' + esc(ts.good) + '</div></div>' +
       '<div class="tri">' +
       '<div class="tri-cell"><div class="tri-v ' + (ts.good === '吉' ? 'good' : '') + '">' + esc(ts.good) + '</div><div class="tri-l">时辰吉凶</div></div>' +
@@ -1214,6 +1244,26 @@
       '要<b>有出处、可追溯</b>，看协纪；要<b>民间通书怎么说</b>，看玉匣记。两者都只作民俗资料，不作决策依据。</div>' +
       '<a class="btn" href="./yuxiaji.html" style="display:block;text-align:center;text-decoration:none;margin-top:10px">打开玉匣记黄历</a>' +
       '</div></div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">天气定位</div>' +
+      '<div class="card-more">Open-Meteo</div></div><div class="card-body">' +
+      (function () {
+        var st = (window.XWX && XWX.state) || {};
+        var ok = st.status === 'ok';
+        var line = ok
+          ? '当前：<b>' + esc(st.city || '未知') + '</b>　' +
+            (st.hourly && Object.keys(st.hourly).length ? '已取到未来 7 天逐时预报' : '') +
+            (st.updated ? '　<span class="mini">' + new Date(st.updated).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) + ' 更新</span>' : '')
+          : (st.status === 'loading' ? '正在定位…'
+            : (st.status === 'error' ? '定位失败：' + esc(st.err || '') + '（可手动填城市）' : '尚未定位'));
+        return '<div class="dress-txt">' + line + '</div>' +
+          '<div class="mini" style="margin-top:6px">首页阴历下方显示当天天气，时辰列表显示各时辰天气。仅查看最近 7 天时显示；断网时用上次缓存。</div>' +
+          '<div class="frow" style="margin-top:8px">' +
+          '<input class="dateinput" id="wxc" placeholder="输入城市，如 杭州" style="flex:1" value="">' +
+          '<span class="fchip" data-act="wxcity">查询</span>' +
+          '</div>' +
+          '<button class="btn ghost" data-act="wxrelocate" style="margin-top:8px">自动定位（当前城市）</button>';
+      })() +
+      '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">开发者说明</div>' +
       '<div class="card-more">来源 · 边界 · 联系</div></div><div class="card-body">' +
 
@@ -1498,7 +1548,9 @@
           '<div class="ts-gz">' + esc(h.gz) + '</div>' +
           '<div class="ts-time">' + esc(h.range) + '</div>' +
           '<div class="ts-luck ' + (h.good === '吉' ? 'j' : 'x') + '">' + (h.good === '吉' ? '吉' : '凶') + '</div>' +
-          '<div class="ts-yi">冲' + esc(h.chongName) + ' 煞' + esc(h.sha) + ' · ' + esc(h.shen) + '</div>' +
+          '<div class="ts-yi">冲' + esc(h.chongName) + ' 煞' + esc(h.sha) + ' · ' + esc(h.shen) +
+          (wxHourSpan(r.solar.y, r.solar.m, r.solar.d, i) ? '<br>' + wxHourSpan(r.solar.y, r.solar.m, r.solar.d, i) : '') +
+          '</div>' +
           (hp ? '<div style="flex-basis:100%;font-size:11.5px;color:#6B6259;margin:2px 0 0 62px">对你 <b style="color:' +
             (hp.sc >= 60 ? '#B3202A' : '#6B6259') + '">' + hp.sc + '</b> 分（' + esc(hp.cs) + '）' +
             (hp.harm.length ? '　<span style="color:#B3202A">慎：' + hp.harm.join('、') + '</span>' : '') + '</div>' : '') +
@@ -1785,6 +1837,27 @@
       window.open('./install.html', '_blank');
       return;
     }
+    if (k === 'wxrelocate' || k === 'wxcity') {
+      if (!window.XWX) { toast('天气模块未加载'); return; }
+      if (k === 'wxrelocate') {
+        toast('正在定位…');
+        XWX.state.lat = null; XWX.state.lon = null;
+        XWX.load(true).then(function () {
+          toast(XWX.state.status === 'ok' ? '天气已更新（' + (XWX.state.city || '') + '）' : '定位失败，请手动填城市');
+          render();
+        });
+        return;
+      }
+      var q = (document.getElementById('wxc') || {}).value || '';
+      q = q.trim();
+      if (!q) { toast('请输入城市名'); return; }
+      toast('查询中…');
+      XWX.searchCity(q).then(function () {
+        toast('已切换到 ' + (XWX.state.city || q));
+        render();
+      }).catch(function () { toast('没找到这个城市'); });
+      return;
+    }
     if (k === 'pmode') {
       S.pMode = p[1] === 'zodiac' ? 'zodiac' : (p[1] === 'bazi' ? 'bazi' : 'generic');
       try { localStorage.setItem('xieji.pmode', S.pMode); } catch (e) { }
@@ -1962,4 +2035,19 @@
   window.addEventListener('hashchange', function () { bootHash(); render(); });
 
   render();
+
+  /* 天气：先用缓存渲染一次，再后台更新（失败不影响黄历） */
+  if (window.XWX) {
+    try {
+      XWX.init();
+      if (XWX.state.hourly && Object.keys(XWX.state.hourly).length) render();
+      XWX.load(false).then(function () {
+        try { render(); } catch (e) { }
+      });
+      /* 每 30 分钟刷新一次 */
+      setInterval(function () {
+        XWX.load(true).then(function () { try { render(); } catch (e) { } });
+      }, 30 * 60 * 1000);
+    } catch (e) { }
+  }
 })();
