@@ -249,6 +249,11 @@ body{
 .qr-empty{display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--ink3);border-style:dashed}
 .qr-txt{flex:1;font-size:13px;color:var(--ink2);line-height:1.7}
 
+/* 顶部体系切换 */
+.navbar.appnav{gap:8px;font-size:13px;font-weight:400;letter-spacing:0}
+.appsw{padding:5px 13px;border-radius:15px;border:1px solid var(--line);background:#fff;color:var(--ink2);text-decoration:none;font-size:13px;line-height:1.2}
+.appsw.on{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+
 </style>
 </head>
 <body>
@@ -4210,6 +4215,27 @@ window.XiejiQiongtong = {
       (S.zodiac !== null && S.zodiac !== undefined ? '属' + ANIMALS[S.zodiac] + '（' + ZHI[S.zodiac] + '）' : '未设置') +
       (S.bz ? '　四柱 ' + esc(S.bz.yearText) + ' ' + esc(S.bz.monthText) + ' ' + esc(S.bz.dayText) + (S.bz.hourText ? ' ' + esc(S.bz.hourText) : '') : '') +
       '</div></div></div>' +
+      '<div class="card"><div class="card-hd"><div class="card-title">两套黄历并列</div>' +
+      '<div class="card-more">不是一套</div></div><div class="card-body">' +
+      '<div class="dress-txt">顶部两个按钮切换：<b>协纪黄历</b>（本页）与<b>玉匣记黄历</b>（另一页）。' +
+      '两者历法内核同一套（定朔定气、北京时间、年柱以立春、月柱以节），但<b>吉凶判法完全不同</b>，' +
+      '各自独立成篇，没有混算。</div>' +
+      '<div class="dev-h">各自依据</div>' +
+      '<div class="dress-txt"><b>协纪黄历</b>：清乾隆官修《钦定协纪辨方书》。日用取卷十月表六等（上／上次／中／中次／下／下下），' +
+      '神煞依卷三至卷八义例起例，每条宜忌可回溯卷十原文。<br>' +
+      '<b>玉匣记黄历</b>：民间通书《玉匣记》。断法为十二建星断语 + 二十八宿值日 + 民俗忌日' +
+      '（杨公忌、月忌、十恶大败、四不详、长短星、探病、神号鬼哭）+ 六十六项逐事择日表。</div>' +
+      '<div class="dev-h">会矛盾的地方</div>' +
+      '<div class="dress-txt">' +
+      '① <b>百事忌</b>：玉匣记的杨公忌、月忌、十恶大败一命中即判「大凶」；协纪没有这几个神煞，同一天照样按月表判「中」或「上」。<br>' +
+      '② <b>黄黑道不同源</b>：协纪用十二值神（青龙、明堂…），玉匣用建除歌诀「建满平收黑，除危定执黄」。<br>' +
+      '③ <b>建除取法不同</b>：协纪不单独给建除评吉凶，只按等第列宜忌；玉匣按「平、成、开、危最吉；定、除次吉；破大凶」。<br>' +
+      '④ <b>二十八宿</b>：协纪卷十不用值宿断日；玉匣逐日值宿并分吉凶。<br>' +
+      '⑤ <b>评分</b>：玉匣那套「宿＋建除＋黄黑＋忌日罚分」是它自定的权重，原书没有这个算式。</div>' +
+      '<div class="warnbox" style="margin-top:8px">同一天，两边给出相反结论是正常的，不是谁算错。' +
+      '要<b>有出处、可追溯</b>，看协纪；要<b>民间通书怎么说</b>，看玉匣记。两者都只作民俗资料，不作决策依据。</div>' +
+      '<a class="btn" href="./yuxiaji.html" style="display:block;text-align:center;text-decoration:none;margin-top:10px">打开玉匣记黄历</a>' +
+      '</div></div>' +
       '<div class="card"><div class="card-hd"><div class="card-title">开发者说明</div>' +
       '<div class="card-more">来源 · 边界 · 联系</div></div><div class="card-body">' +
 
@@ -4641,7 +4667,10 @@ window.XiejiQiongtong = {
     var tabbar = '<div class="tabbar">' + tabs + '</div>';
     var sh = sheetHtml(r);
     document.getElementById('app').innerHTML =
-      '<div class="navbar">' + (TITLES[S.tab] || '协纪黄历') + '</div>' +
+      '<div class="navbar appnav">' +
+      '<span class="appsw on">协纪黄历</span>' +
+      '<a class="appsw" href="./yuxiaji.html">玉匣记黄历</a>' +
+      '</div>' +
       '<div class="scroll" id="scroll">' + body + '</div>' +
       tabbar +
       '<div class="mask' + (S.sheet ? ' on' : '') + '" data-act="closesheet"></div>' +
