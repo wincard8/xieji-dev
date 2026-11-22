@@ -4,11 +4,12 @@ const path = require('path');
 const dir = __dirname;
 const read = f => fs.readFileSync(path.join(dir, f), 'utf8');
 
-const css = read('mobile.css');
+const css = read('mobile.css') + '\n' + read('weather.css');
 const engine = read('engine.js');
 const quotes = read('quotes-data.js');
 const mingli = read('mingli-data.js');
 const qiongtong = read('qiongtong-data.js');
+const weather = read('weather.js');
 const app = read('mobile.js');
 
 /* 微信二维码：有 wx-qr.png 就内联成 base64，没有就留空（界面显示文字兜底） */
@@ -48,6 +49,9 @@ ${mingli}
 </script>
 <script>
 ${qiongtong}
+</script>
+<script>
+${weather}
 </script>
 ${qrScript}
 <script>
