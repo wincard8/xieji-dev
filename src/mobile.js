@@ -1646,6 +1646,7 @@
     var sh = sheetHtml(r);
     document.getElementById('app').innerHTML =
       '<div class="navbar appnav">' +
+      '<div class="seal"><span>协</span><span>纪</span></div>' +
       '<span class="appsw on">协纪黄历</span>' +
       '<a class="appsw" href="./yuxiaji.html">玉匣记黄历</a>' +
       '</div>' +
