@@ -253,6 +253,9 @@ body{
 .navbar.appnav{gap:10px;height:auto;padding:11px 0 9px;font-size:17px;font-weight:400;letter-spacing:0}
 .appsw{padding:8px 19px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink2);text-decoration:none;font-size:17px;line-height:1.2}
 .appsw.on{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+/* 顶部印章（与玉匣记页同款） */
+.navbar.appnav .seal{width:30px;height:30px;background:var(--red);color:#fff;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.02;letter-spacing:0;font-family:"Songti SC","STSong",serif;padding-top:1px;box-shadow:0 2px 6px rgba(179,32,42,.28)}
+.navbar.appnav .seal span{display:block}
 
 </style>
 </head>
@@ -4668,6 +4671,7 @@ window.XiejiQiongtong = {
     var sh = sheetHtml(r);
     document.getElementById('app').innerHTML =
       '<div class="navbar appnav">' +
+      '<div class="seal"><span>协</span><span>纪</span></div>' +
       '<span class="appsw on">协纪黄历</span>' +
       '<a class="appsw" href="./yuxiaji.html">玉匣记黄历</a>' +
       '</div>' +
